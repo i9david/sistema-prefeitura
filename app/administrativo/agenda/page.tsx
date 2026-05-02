@@ -1,12 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 
 function cardClassName() {
   return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
@@ -36,8 +31,12 @@ export default async function AdministrativoAgendaPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <<Sidebar currentPath="/" /> currentPath="/administrativo/agenda" />
+        
+        {/* ✅ SIDEBAR CORRETO */}
+        <Sidebar currentPath="/administrativo/agenda" />
+
         <section className="space-y-6">
+          
           {/* HEADER */}
           <div className={cardClassName()}>
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -50,10 +49,8 @@ export default async function AdministrativoAgendaPage() {
                 </p>
               </div>
 
-              {/* BOTÕES CORRIGIDOS */}
               <div className="flex flex-wrap gap-3">
-                
-                {/* VOLTAR */}
+
                 <Link
                   href="/administrativo"
                   className="rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
@@ -61,7 +58,6 @@ export default async function AdministrativoAgendaPage() {
                   Voltar ao módulo
                 </Link>
 
-                {/* GERENCIAR */}
                 <a
                   href={googleCalendarManageUrl}
                   target="_blank"
@@ -71,7 +67,6 @@ export default async function AdministrativoAgendaPage() {
                   Gerenciar agenda
                 </a>
 
-                {/* CRIAR EVENTO */}
                 <a
                   href={googleCalendarCreateEventUrl}
                   target="_blank"
@@ -80,6 +75,7 @@ export default async function AdministrativoAgendaPage() {
                 >
                   Criar evento
                 </a>
+
               </div>
             </div>
           </div>
@@ -112,6 +108,7 @@ export default async function AdministrativoAgendaPage() {
               </div>
             )}
           </div>
+
         </section>
       </div>
     </main>
