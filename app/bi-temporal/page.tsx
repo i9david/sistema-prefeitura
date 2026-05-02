@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/import { Sidebar } from "@/components/sidebar" currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
+import { Sidebar } from "@/components/sidebar" { Sidebar } from "@/components/sidebar" currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
 
 type RegistroSimples = {
   created_at?: string | null
