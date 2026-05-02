@@ -31,8 +31,7 @@ export default async function AdministrativoAgendaPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <Sidebar />
-
+        <Sidebar currentPath="/administrativo/agenda" />
         <section className="space-y-6">
           {/* HEADER */}
           <div className={cardClassName()}>
