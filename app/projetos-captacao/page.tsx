@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { Sidebar } from "@/components/sidebar" from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
 import { ModuloCaptacaoNav } from '@/components/modulo-captacao-nav'
 
 function cardClassName() {

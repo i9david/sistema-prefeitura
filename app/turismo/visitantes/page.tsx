@@ -1,4 +1,7 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { Sidebar } from "@/components/sidebar" from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ModuloTurismoNav } from '@/components/modulo-turismo-nav'
 import { criarVisitanteTurismo } from './actions'

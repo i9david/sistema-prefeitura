@@ -1,6 +1,9 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { Sidebar } from "@/components/sidebar" from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
 
 function normalizarTelefone(valor: string) {
