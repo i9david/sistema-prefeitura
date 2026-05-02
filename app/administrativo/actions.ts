@@ -1,14 +1,8 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 
 const areas = [
   { modulo: 'Centro Cultural', area: 'Alunos', chave: 'centro_alunos' },
@@ -81,9 +75,7 @@ export async function criarUsuarioInterno(formData: FormData) {
     email,
     password: senha,
     email_confirm: true,
-    user_metadata: {
-      nome_completo: nome,
-    },
+    user_metadata: { nome_completo: nome },
   })
 
   if (authError || !authCriado.user) {
@@ -164,7 +156,7 @@ export async function atualizarUsuarioInterno(formData: FormData) {
   }
 
   if (usuarioAtual.auth_user_id) {
-    const payload: { email: string; password?: string; user_metadata: { nome_completo: string } } = {
+    const payload: any = {
       email,
       user_metadata: { nome_completo: nome },
     }
@@ -183,14 +175,7 @@ export async function atualizarUsuarioInterno(formData: FormData) {
     }
   }
 
-  const { error: deleteError } = await supabase
-    .from('administrativo_permissoes')
-    .delete()
-    .eq('usuario_id', id)
-
-  if (deleteError) {
-    redirect(`/administrativo/usuarios?message=${encodeURIComponent(deleteError.message)}`)
-  }
+  await supabase.from('administrativo_permissoes').delete().eq('usuario_id', id)
 
   const permissoes = extrairPermissoesDoFormulario(formData, id)
 
@@ -216,14 +201,7 @@ export async function inativarUsuarioInterno(formData: FormData) {
 
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('administrativo_usuarios')
-    .update({ status: 'inativo' })
-    .eq('id', id)
-
-  if (error) {
-    redirect(`/administrativo/usuarios?message=${encodeURIComponent(error.message)}`)
-  }
+  await supabase.from('administrativo_usuarios').update({ status: 'inativo' }).eq('id', id)
 
   redirect('/administrativo/usuarios?message=Usuário inativado com sucesso')
 }
@@ -232,20 +210,15 @@ export async function redefinirSenhaUsuario(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
 
   if (!email) {
-    redirect('/administrativo/usuarios?message=Email não encontrado para redefinição')
+    redirect('/administrativo/usuarios?message=Email não encontrado')
   }
 
   const supabase = await createClient()
+
   const redirectTo =
     process.env.NEXT_PUBLIC_PASSWORD_RESET_REDIRECT_URL || 'http://localhost:3000/login'
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo,
-  })
-
-  if (error) {
-    redirect(`/administrativo/usuarios?message=${encodeURIComponent(error.message)}`)
-  }
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo })
 
   redirect('/administrativo/usuarios?message=Email de redefinição enviado com sucesso')
 }
