@@ -1,12 +1,6 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -17,9 +11,7 @@ function limparNomeArquivo(nome: string) {
     .replace(/[^a-zA-Z0-9.-]/g, '_')
 }
 
-async function fazerUploadLogo(
-  arquivo: File | null
-) {
+async function fazerUploadLogo(arquivo: File | null) {
   if (!arquivo || arquivo.size === 0) return null
 
   const supabaseAdmin = createAdminClient()
