@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-slate-100 text-slate-900;
+}
+
+/* Scrollbar premium */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5f5;
+  border-radius: 10px;
+}
+
+/* Cards padrão SaaS */
+.card {
+  @apply rounded-[28px] bg-white border border-slate-200 shadow-[0_12px_40px_rgba(15,23,42,0.08)];
+}
+
+/* Botão principal */
+.btn-primary {
+  @apply bg-violet-600 text-white font-semibold rounded-2xl px-5 py-3 transition hover:bg-violet-700;
+}
+
+/* Botão secundário */
+.btn-secondary {
+  @apply bg-slate-200 text-slate-800 rounded-2xl px-5 py-3 font-semibold hover:bg-slate-300;
+}
