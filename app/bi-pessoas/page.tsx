@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"Sidebar currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
+import { Sidebar } from "@/components/import { Sidebar } from "@/components/sidebar" currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
 
 type Pessoa = {
   id: string
