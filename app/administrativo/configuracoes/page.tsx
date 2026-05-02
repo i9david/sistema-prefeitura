@@ -1,10 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 import { createClient } from '@/lib/supabase/server'
 import { ModuloAdministrativoNav } from '@/components/modulo-administrativo-nav'
 import { salvarConfiguracaoSistema } from './actions'
@@ -90,7 +84,6 @@ export default async function AdministrativoConfiguracoesPage({
                   name="nome_sistema"
                   required
                   defaultValue={nomeSistema}
-                  placeholder="Ex: Secretaria de Cultura e Turismo"
                   className="w-full rounded-2xl border border-slate-300 px-4 py-3"
                 />
               </div>
@@ -108,7 +101,7 @@ export default async function AdministrativoConfiguracoesPage({
                 />
 
                 <p className="mt-2 text-xs text-slate-500">
-                  Envie uma imagem em PNG, JPG ou WEBP. A nova logo substituirá a anterior na configuração.
+                  Envie PNG, JPG ou WEBP
                 </p>
               </div>
 
@@ -118,14 +111,12 @@ export default async function AdministrativoConfiguracoesPage({
                 </p>
               )}
 
-              <div>
-                <button
-                  type="submit"
-                  className="rounded-2xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Salvar configuração
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="rounded-2xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white"
+              >
+                Salvar configuração
+              </button>
             </form>
           </div>
 
@@ -134,40 +125,13 @@ export default async function AdministrativoConfiguracoesPage({
               Prévia
             </h2>
 
-            <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm text-slate-500">Nome atual exibido</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {nomeSistema}
-              </p>
+            <div className="mt-4">
+              <p className="text-sm text-slate-500">Nome atual</p>
+              <p className="text-2xl font-bold">{nomeSistema}</p>
 
-              <div className="mt-6">
-                <p className="text-sm text-slate-500">Logomarca atual</p>
-
-                {logoPrefeitura ? (
-                  <div className="mt-3 flex items-center gap-4">
-                    <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-white p-3">
-                      <img
-                        src={logoPrefeitura}
-                        alt="Logomarca da Prefeitura"
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold text-slate-700">
-                        Logomarca cadastrada
-                      </p>
-                      <p className="mt-1 break-all text-xs text-slate-500">
-                        {logoPrefeitura}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 flex h-28 w-28 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white text-center text-xs text-slate-400">
-                    Sem logo
-                  </div>
-                )}
-              </div>
+              {logoPrefeitura && (
+                <img src={logoPrefeitura} className="mt-4 h-24" />
+              )}
             </div>
           </div>
         </section>
