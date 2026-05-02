@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { <Sidebar currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
+import { Sidebar } from "@/components/sidebar"Sidebar currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
 
 type Pessoa = {
   id: string
