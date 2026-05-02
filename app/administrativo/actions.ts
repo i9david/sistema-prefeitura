@@ -5,7 +5,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar" from 'next/navigation'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { Sidebar } from "@/components/sidebar"
 
 const areas = [
   { modulo: 'Centro Cultural', area: 'Alunos', chave: 'centro_alunos' },
