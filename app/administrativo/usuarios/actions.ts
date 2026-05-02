@@ -1,12 +1,6 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 import { createClient } from '@/lib/supabase/server'
 
 export async function criarUsuarioAdministrativo(formData: FormData) {
@@ -28,15 +22,8 @@ export async function criarUsuarioAdministrativo(formData: FormData) {
   const { error } = await supabase
     .from('administrativo_usuarios')
     .upsert(
-      {
-        nome,
-        email,
-        perfil,
-        status,
-      },
-      {
-        onConflict: 'email',
-      }
+      { nome, email, perfil, status },
+      { onConflict: 'email' }
     )
 
   if (error) {
@@ -74,9 +61,7 @@ export async function atualizarAcesso(formData: FormData) {
         pode_editar: podeEditar,
         pode_excluir: podeExcluir,
       },
-      {
-        onConflict: 'id',
-      }
+      { onConflict: 'id' }
     )
 
   if (error) {

@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import {
-  LayoutDashboard,
   Building2,
   Landmark,
   BookOpen,
@@ -20,7 +19,7 @@ type Props = {
   currentPath: string
 }
 
-export async function <Sidebar currentPath="/" />({ currentPath }: Props) {
+export async function Sidebar({ currentPath }: Props) {
   const modulos = await buscarModulosPermitidos()
 
   function pode(modulo: string) {
