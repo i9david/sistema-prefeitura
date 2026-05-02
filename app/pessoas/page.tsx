@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from '@/components/sidebar'
+import { <Sidebar currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
 
 type Pessoa = {
   id: string
@@ -119,7 +119,7 @@ export default async function PessoasPage({
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <Sidebar />
+        <<Sidebar currentPath="/" /> />
 
         <section className="space-y-6">
           <div className={cardClassName()}>

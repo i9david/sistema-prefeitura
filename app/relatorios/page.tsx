@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from '@/components/sidebar'
+import { <Sidebar currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
 import { getContextoPermissoes } from '@/lib/get-permissoes'
 import { RelatoriosFiltros } from '@/components/relatorios-filtros'
 
@@ -189,7 +189,7 @@ export default async function RelatoriosPage({
   return (
     <main className="min-h-screen p-6 bg-slate-50">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_1fr]">
-        <Sidebar currentPath="/relatorios" />
+        <<Sidebar currentPath="/" /> currentPath="/relatorios" />
 
         <section className="space-y-6">
           <div className={cardClassName()}>
