@@ -20,7 +20,7 @@ import {
 
 type Relacao<T> = T | T[] | null
 
-type PessoaRelacionada = {
+type Pessoa = {
   id: string
   nome: string
   telefone: string | null
@@ -55,12 +55,13 @@ type AulaRelacionada = {
   aula_professores: AulaProfessorRelacionada[] | null
 }
 
-type MatriculaRelacionada = {
+type Matricula = {
   id: string
+  aluno_id: string
   status: string
   data_inicio: string
   data_fim: string | null
-  aulas: Relacao<AulaRelacionada>
+  aula_id: string
 }
 
 type Aluno = {
@@ -72,9 +73,6 @@ type Aluno = {
   aula_id: string
   status: string
   biometria_cadastrada: boolean
-  aluno_matriculas: MatriculaRelacionada[] | null
-  pessoas: Relacao<PessoaRelacionada>
-  aulas: Relacao<AulaRelacionada>
 }
 
 type AulaOpcao = AulaRelacionada
@@ -95,27 +93,36 @@ function normalizarRelacao<T>(relacao: Relacao<T>) {
   return relacao
 }
 
-function getMatriculasAtivas(aluno: Aluno) {
-  return aluno.aluno_matriculas?.filter((matricula) => matricula.status === 'ativo') ?? []
+function getMatriculasAtivas(aluno: Aluno, matriculasByAlunoId: Map<string, Matricula[]>) {
+  return matriculasByAlunoId.get(aluno.id)?.filter((matricula) => matricula.status === 'ativo') ?? []
 }
 
-function getAulasAtivas(aluno: Aluno) {
-  const aulasMatriculas = getMatriculasAtivas(aluno)
-    .map((matricula) => normalizarRelacao(matricula.aulas))
+function getAulasAtivas(
+  aluno: Aluno,
+  matriculasByAlunoId: Map<string, Matricula[]>,
+  aulasById: Map<string, AulaRelacionada>
+) {
+  const aulasMatriculas = getMatriculasAtivas(aluno, matriculasByAlunoId)
+    .map((matricula) => aulasById.get(matricula.aula_id))
     .filter((aula): aula is AulaRelacionada => Boolean(aula))
 
   if (aulasMatriculas.length > 0) return aulasMatriculas
 
-  const aulaLegada = normalizarRelacao(aluno.aulas)
+  const aulaLegada = aulasById.get(aluno.aula_id) ?? null
   return aulaLegada ? [aulaLegada] : []
 }
 
-function getAula(aluno: Aluno) {
-  return getAulasAtivas(aluno)[0] ?? null
+function getAula(
+  aluno: Aluno,
+  matriculasByAlunoId: Map<string, Matricula[]>,
+  aulasById: Map<string, AulaRelacionada>
+) {
+  return getAulasAtivas(aluno, matriculasByAlunoId, aulasById)[0] ?? null
 }
 
-function getPessoa(aluno: Aluno) {
-  return normalizarRelacao(aluno.pessoas)
+function getPessoa(aluno: Aluno, pessoasById: Map<string, Pessoa>) {
+  if (!aluno.pessoa_id) return null
+  return pessoasById.get(aluno.pessoa_id) ?? null
 }
 
 function getModalidade(aula: AulaRelacionada | null) {
@@ -286,6 +293,57 @@ export default async function AlunosPage({
   const professores = (professoresData ?? []) as ProfessorRelacionado[]
   const aulaProfessores = (aulaProfessoresData ?? []) as AulaProfessorRelacionada[]
 
+  const { data: alunosData, error } = await supabase
+    .from('alunos')
+    .select('id, pessoa_id, nome, telefone, data_nascimento, aula_id, status, biometria_cadastrada')
+    .order('nome', { ascending: true })
+
+  if (error) {
+    redirect(`/alunos?message=${encodeURIComponent(error.message)}`)
+  }
+
+  const alunosBrutos = (alunosData ?? []) as Aluno[]
+  const alunoIds = alunosBrutos.map((aluno) => aluno.id)
+  const pessoaIds = Array.from(
+    new Set(alunosBrutos.map((aluno) => aluno.pessoa_id).filter(Boolean) as string[])
+  )
+
+  const { data: pessoasData, error: pessoasError } =
+    pessoaIds.length > 0
+      ? await supabase
+          .from('pessoas')
+          .select('id, nome, telefone, data_nascimento')
+          .in('id', pessoaIds)
+      : { data: [], error: null }
+
+  if (pessoasError) {
+    redirect(`/alunos?message=${encodeURIComponent(pessoasError.message)}`)
+  }
+
+  const { data: alunoMatriculasData, error: alunoMatriculasError } =
+    alunoIds.length > 0
+      ? await supabase
+          .from('aluno_matriculas')
+          .select('id, aluno_id, status, data_inicio, data_fim, aula_id')
+          .in('aluno_id', alunoIds)
+      : { data: [], error: null }
+
+  if (alunoMatriculasError) {
+    redirect(`/alunos?message=${encodeURIComponent(alunoMatriculasError.message)}`)
+  }
+
+  const pessoas = (pessoasData ?? []) as Pessoa[]
+  const matriculas = (alunoMatriculasData ?? []) as Matricula[]
+  const pessoasById = new Map(pessoas.map((pessoa) => [pessoa.id, pessoa]))
+  const aulasById = new Map((aulas as AulaRelacionada[]).map((aula) => [aula.id, aula]))
+  const matriculasByAlunoId = new Map<string, Matricula[]>()
+
+  matriculas.forEach((matricula) => {
+    const itens = matriculasByAlunoId.get(matricula.aluno_id) ?? []
+    itens.push(matricula)
+    matriculasByAlunoId.set(matricula.aluno_id, itens)
+  })
+
   const aulasFiltradasIds = aulas
     .filter((aula) => {
       const professoresDaAula = getProfessores(aula, aulaProfessores, professores)
@@ -303,77 +361,24 @@ export default async function AlunosPage({
     })
     .map((aula) => aula.id)
 
-  let query = supabase
-    .from('alunos')
-    .select(`
-      id,
-      pessoa_id,
-      nome,
-      telefone,
-      data_nascimento,
-      aula_id,
-      status,
-      biometria_cadastrada,
-      aluno_matriculas!alunos_id_fkey (
-        id,
-        status,
-        data_inicio,
-        data_fim,
-        aulas:aula_id!aluno_matriculas_aula_id_fkey (
-          id,
-          nome,
-          modalidade_id,
-          dia_semana,
-          horario_inicio,
-          horario_fim,
-          status,
-          modalidades!aulas_modalidade_id_fkey ( id, nome ),
-          aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
-        )
-      ),
-      pessoas:pessoa_id!alunos_pessoa_id_fkey (
-        id,
-        nome,
-        telefone,
-        data_nascimento
-      ),
-      aulas:aula_id!alunos_aula_id_fkey (
-        id,
-        nome,
-        modalidade_id,
-        dia_semana,
-        horario_inicio,
-        horario_fim,
-        status,
-        modalidades!aulas_modalidade_id_fkey ( id, nome ),
-        aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
-      )
-    `)
-    .order('nome', { ascending: true })
-
-  if (busca) query = query.ilike('nome', `%${busca}%`)
-  if (statusFiltro) query = query.eq('status', statusFiltro)
-
-  const { data: alunosData, error } = await query
-
-  if (error) {
-    redirect(`/alunos?message=${encodeURIComponent(error.message)}`)
-  }
-
-  const alunosBrutos = (alunosData ?? []) as unknown as Aluno[]
   const alunos =
     aulaFiltro || modalidadeFiltro || professorFiltro
       ? alunosBrutos.filter((aluno) => {
           if (aulasFiltradasIds.length === 0) return false
 
-          return getAulasAtivas(aluno).some(
+          return getAulasAtivas(aluno, matriculasByAlunoId, aulasById).some(
             (aula) =>
               aulasFiltradasIds.includes(aula.id) &&
-              aulaAtendeFiltros(aula, {
-                aulaId: aulaFiltro,
-                modalidadeId: modalidadeFiltro,
-                professorId: professorFiltro,
-              }, aulaProfessores, professores)
+              aulaAtendeFiltros(
+                aula,
+                {
+                  aulaId: aulaFiltro,
+                  modalidadeId: modalidadeFiltro,
+                  professorId: professorFiltro,
+                },
+                aulaProfessores,
+                professores
+              )
           )
         })
       : alunosBrutos
@@ -396,8 +401,10 @@ export default async function AlunosPage({
   const alunoEditando = editarId
     ? alunos.find((aluno) => aluno.id === editarId)
     : null
-  const pessoaEditando = alunoEditando ? getPessoa(alunoEditando) : null
-  const aulaEditando = alunoEditando ? getAula(alunoEditando) : null
+  const pessoaEditando = alunoEditando ? getPessoa(alunoEditando, pessoasById) : null
+  const aulaEditando = alunoEditando
+    ? getAula(alunoEditando, matriculasByAlunoId, aulasById)
+    : null
 
   const mostrarFormulario = modoNovo || !!alunoEditando
 
@@ -414,7 +421,7 @@ export default async function AlunosPage({
   const relatorioProfessores = professores
     .map((professor) => {
       const alunosDoProfessor = alunos.filter((aluno) =>
-        getAulasAtivas(aluno).some((aula) =>
+        getAulasAtivas(aluno, matriculasByAlunoId, aulasById).some((aula) =>
           getProfessores(aula, aulaProfessores, professores).some((item) => item.id === professor.id)
         )
       )
@@ -665,8 +672,8 @@ export default async function AlunosPage({
 
                   <tbody>
                     {alunos.map((aluno) => {
-                      const aulasAtivas = getAulasAtivas(aluno)
-                      const pessoa = getPessoa(aluno)
+                      const aulasAtivas = getAulasAtivas(aluno, matriculasByAlunoId, aulasById)
+                      const pessoa = getPessoa(aluno, pessoasById)
                       const professoresDasAulas = getProfessoresAulas(aulasAtivas, aulaProfessores, professores)
                       const presencas = contarPresencas(frequencias, aluno.id)
                       const faltas = contarFaltas(frequencias, aluno.id)
