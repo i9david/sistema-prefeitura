@@ -1,6 +1,6 @@
 ﻿'use server'
 
-import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from "@/components/sidebar"
@@ -14,9 +14,9 @@ export async function salvarBiometria(formData: FormData) {
     redirect('/alunos?message=Preencha os dados da biometria')
   }
 
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { error: insertError } = await supabase.from('aluno_biometrias').insert({
+  const { error: insertError } = await admin.from('aluno_biometrias').insert({
     aluno_id: alunoId,
     identificador_biometrico: identificador,
     dedo: dedo || null,
@@ -27,7 +27,7 @@ export async function salvarBiometria(formData: FormData) {
     redirect(`/alunos?message=${encodeURIComponent(insertError.message)}`)
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await admin
     .from('alunos')
     .update({ biometria_cadastrada: true })
     .eq('id', alunoId)

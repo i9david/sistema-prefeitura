@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type SupabaseTenant = Awaited<ReturnType<typeof exigirPermissaoAction>>['supabase']
 
@@ -183,6 +184,7 @@ export async function criarAula(formData: FormData) {
     'Aulas',
     'criar'
   )
+  const admin = createAdminClient()
 
   const nome = String(formData.get('nome') ?? '').trim()
   const modalidadeId = String(formData.get('modalidade_id') ?? '').trim()
@@ -206,7 +208,7 @@ export async function criarAula(formData: FormData) {
     redirect('/aulas?novo=1&message=Horario de inicio deve ser menor que horario de fim')
   }
 
-  const { error } = await supabase.from('aulas').insert({
+  const { error } = await admin.from('aulas').insert({
     nome,
     modalidade_id: modalidadeId,
     dia_semana: diaSemana,
@@ -228,6 +230,7 @@ export async function atualizarAula(formData: FormData) {
     'Aulas',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const nome = String(formData.get('nome') ?? '').trim()
@@ -262,7 +265,7 @@ export async function atualizarAula(formData: FormData) {
     horarioFim,
   })
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('aulas')
     .update({
       nome,
@@ -287,6 +290,7 @@ export async function inativarAula(formData: FormData) {
     'Aulas',
     'excluir'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -294,7 +298,7 @@ export async function inativarAula(formData: FormData) {
     redirect('/aulas?message=Aula nao encontrada')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('aulas')
     .update({ status: 'inativa' })
     .eq('id', id)
@@ -312,6 +316,7 @@ export async function ativarAula(formData: FormData) {
     'Aulas',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -319,7 +324,7 @@ export async function ativarAula(formData: FormData) {
     redirect('/aulas?message=Aula nao encontrada')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('aulas')
     .update({ status: 'ativa' })
     .eq('id', id)

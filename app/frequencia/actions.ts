@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type FrequenciaExistente = {
   aluno_id: string
@@ -30,6 +31,7 @@ export async function salvarFrequencia(formData: FormData) {
     'Frequência',
     'editar'
   )
+  const admin = createAdminClient()
 
   const aulaId = String(formData.get('aula_id') ?? '').trim()
   const dataAula = String(formData.get('data_aula') ?? '').trim()
@@ -166,7 +168,7 @@ export async function salvarFrequencia(formData: FormData) {
     }
   })
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await admin
     .from('frequencias')
     .upsert(registrosParaSalvar, {
       onConflict: 'municipio_id,aula_id,aluno_id,data_aula',

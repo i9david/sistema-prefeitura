@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function vincularProfessorNaModalidade(formData: FormData) {
   const { supabase } = await exigirPermissaoAction(
@@ -9,6 +10,7 @@ export async function vincularProfessorNaModalidade(formData: FormData) {
     'Professores',
     'criar'
   )
+  const admin = createAdminClient()
 
   const modalidadeId = String(formData.get('modalidade_id') ?? '').trim()
   const professorId = String(formData.get('professor_id') ?? '').trim()
@@ -29,7 +31,7 @@ export async function vincularProfessorNaModalidade(formData: FormData) {
     redirect('/modalidade-professores?message=Esse professor já está vinculado a essa modalidade')
   }
 
-  const { error } = await supabase.from('modalidade_professores').insert({
+  const { error } = await admin.from('modalidade_professores').insert({
     modalidade_id: modalidadeId,
     professor_id: professorId,
     funcao,
@@ -48,6 +50,7 @@ export async function atualizarVinculoProfessorModalidade(formData: FormData) {
     'Professores',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const modalidadeId = String(formData.get('modalidade_id') ?? '').trim()
@@ -58,7 +61,7 @@ export async function atualizarVinculoProfessorModalidade(formData: FormData) {
     redirect('/modalidade-professores?message=Preencha todos os campos obrigatórios')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('modalidade_professores')
     .update({
       modalidade_id: modalidadeId,
@@ -80,6 +83,7 @@ export async function excluirVinculoProfessorModalidade(formData: FormData) {
     'Professores',
     'excluir'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -87,7 +91,7 @@ export async function excluirVinculoProfessorModalidade(formData: FormData) {
     redirect('/modalidade-professores?message=Vínculo não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('modalidade_professores')
     .delete()
     .eq('id', id)

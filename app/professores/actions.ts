@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function normalizarTelefone(valor: string) {
   return valor.replace(/\D/g, '').slice(0, 11)
@@ -18,6 +19,7 @@ export async function criarProfessor(formData: FormData) {
     'Professores',
     'criar'
   )
+  const admin = createAdminClient()
 
   const nome = String(formData.get('nome') ?? '').trim()
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
@@ -29,7 +31,7 @@ export async function criarProfessor(formData: FormData) {
     redirect('/professores?novo=1&message=Preencha os campos obrigatórios')
   }
 
-  const { data: professor, error } = await supabase
+  const { data: professor, error } = await admin
     .from('professores')
     .insert({
       nome,
@@ -55,7 +57,7 @@ export async function criarProfessor(formData: FormData) {
       funcao: 'Professor',
     }))
 
-    const { error: erroVinculos } = await supabase
+    const { error: erroVinculos } = await admin
       .from('modalidade_professores')
       .insert(vinculos)
 
@@ -73,6 +75,7 @@ export async function atualizarProfessor(formData: FormData) {
     'Professores',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const nome = String(formData.get('nome') ?? '').trim()
@@ -85,7 +88,7 @@ export async function atualizarProfessor(formData: FormData) {
     redirect('/professores?message=Preencha os campos obrigatórios')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('professores')
     .update({
       nome,
@@ -99,7 +102,7 @@ export async function atualizarProfessor(formData: FormData) {
     redirect(`/professores?message=${encodeURIComponent(error.message)}`)
   }
 
-  const { error: erroDelete } = await supabase
+  const { error: erroDelete } = await admin
     .from('modalidade_professores')
     .delete()
     .eq('professor_id', id)
@@ -115,7 +118,7 @@ export async function atualizarProfessor(formData: FormData) {
       funcao: 'Professor',
     }))
 
-    const { error: erroInsert } = await supabase
+    const { error: erroInsert } = await admin
       .from('modalidade_professores')
       .insert(vinculos)
 
@@ -133,6 +136,7 @@ export async function inativarProfessor(formData: FormData) {
     'Professores',
     'excluir'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -140,7 +144,7 @@ export async function inativarProfessor(formData: FormData) {
     redirect('/professores?message=Professor não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('professores')
     .update({ status: 'inativo' })
     .eq('id', id)
@@ -158,6 +162,7 @@ export async function ativarProfessor(formData: FormData) {
     'Professores',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -165,7 +170,7 @@ export async function ativarProfessor(formData: FormData) {
     redirect('/professores?message=Professor não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('professores')
     .update({ status: 'ativo' })
     .eq('id', id)

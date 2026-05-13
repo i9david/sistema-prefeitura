@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function criarModalidade(formData: FormData) {
   const { supabase } = await exigirPermissaoAction(
@@ -9,6 +10,7 @@ export async function criarModalidade(formData: FormData) {
     'Modalidades',
     'criar'
   )
+  const admin = createAdminClient()
 
   const nome = String(formData.get('nome') ?? '').trim()
   const descricao = String(formData.get('descricao') ?? '').trim()
@@ -18,7 +20,7 @@ export async function criarModalidade(formData: FormData) {
     redirect('/modalidades?message=Preencha todos os campos obrigatórios')
   }
 
-  const { error } = await supabase.from('modalidades').insert({
+  const { error } = await admin.from('modalidades').insert({
     nome,
     descricao: descricao || null,
     status,
@@ -37,6 +39,7 @@ export async function atualizarModalidade(formData: FormData) {
     'Modalidades',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const nome = String(formData.get('nome') ?? '').trim()
@@ -47,7 +50,7 @@ export async function atualizarModalidade(formData: FormData) {
     redirect('/modalidades?message=Preencha todos os campos obrigatórios')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('modalidades')
     .update({
       nome,
@@ -69,6 +72,7 @@ export async function inativarModalidade(formData: FormData) {
     'Modalidades',
     'excluir'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -76,7 +80,7 @@ export async function inativarModalidade(formData: FormData) {
     redirect('/modalidades?message=Modalidade não encontrada')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('modalidades')
     .update({ status: 'inativa' })
     .eq('id', id)
@@ -94,6 +98,7 @@ export async function ativarModalidade(formData: FormData) {
     'Modalidades',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -101,7 +106,7 @@ export async function ativarModalidade(formData: FormData) {
     redirect('/modalidades?message=Modalidade não encontrada')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('modalidades')
     .update({ status: 'ativa' })
     .eq('id', id)

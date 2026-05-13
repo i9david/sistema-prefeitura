@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function vincularProfessorNaAula(formData: FormData) {
   const { supabase } = await exigirPermissaoAction(
@@ -9,6 +10,7 @@ export async function vincularProfessorNaAula(formData: FormData) {
     'Professores',
     'criar'
   )
+  const admin = createAdminClient()
 
   const aulaId = String(formData.get('aula_id') ?? '').trim()
   const professorId = String(formData.get('professor_id') ?? '').trim()
@@ -29,7 +31,7 @@ export async function vincularProfessorNaAula(formData: FormData) {
     redirect('/aula-professores?message=Esse professor já está vinculado a essa aula')
   }
 
-  const { error } = await supabase.from('aula_professores').insert({
+  const { error } = await admin.from('aula_professores').insert({
     aula_id: aulaId,
     professor_id: professorId,
     funcao,
@@ -48,6 +50,7 @@ export async function atualizarVinculoProfessorAula(formData: FormData) {
     'Professores',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const aulaId = String(formData.get('aula_id') ?? '').trim()
@@ -58,7 +61,7 @@ export async function atualizarVinculoProfessorAula(formData: FormData) {
     redirect('/aula-professores?message=Preencha todos os campos obrigatórios')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('aula_professores')
     .update({
       aula_id: aulaId,
@@ -80,6 +83,7 @@ export async function excluirVinculoProfessorAula(formData: FormData) {
     'Professores',
     'excluir'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -87,7 +91,7 @@ export async function excluirVinculoProfessorAula(formData: FormData) {
     redirect('/aula-professores?message=Vínculo não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('aula_professores')
     .delete()
     .eq('id', id)

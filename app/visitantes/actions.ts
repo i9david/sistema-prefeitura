@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type SupabaseTenant = Awaited<ReturnType<typeof exigirPermissaoAction>>['supabase']
 
@@ -36,7 +37,8 @@ function agoraBrasil() {
 }
 
 async function encerrarVisitantesExpirados(
-  supabase: SupabaseTenant
+  supabase: SupabaseTenant,
+  admin: ReturnType<typeof createAdminClient>
 ) {
   const { data: visitantesAtivos, error: buscaError } = await supabase
     .from('visitantes')
@@ -60,7 +62,7 @@ async function encerrarVisitantesExpirados(
     if (diferencaMs >= seisHorasMs) {
       const { hora } = agoraBrasil()
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await admin
         .from('visitantes')
         .update({
           status: 'inativo',
@@ -72,7 +74,7 @@ async function encerrarVisitantesExpirados(
         throw new Error(updateError.message)
       }
 
-      const { error: visitaError } = await supabase
+      const { error: visitaError } = await admin
         .from('visitante_visitas')
         .update({
           status: 'inativo',
@@ -85,7 +87,7 @@ async function encerrarVisitantesExpirados(
       }
 
       if (visitante.destino === 'museu') {
-        await supabase
+        await admin
           .from('museu_visitantes')
           .update({
             status: 'inativo',
@@ -99,10 +101,12 @@ async function encerrarVisitantesExpirados(
 
 async function buscarOuCriarPessoaVisitante({
   supabase,
+  admin,
   nome,
   telefone,
 }: {
   supabase: SupabaseTenant
+  admin: ReturnType<typeof createAdminClient>
   nome: string
   telefone: string
 }) {
@@ -119,7 +123,7 @@ async function buscarOuCriarPessoaVisitante({
   const pessoaExistente = pessoas?.[0]
 
   if (pessoaExistente?.id) {
-    const { error: erroAtualizacao } = await supabase
+    const { error: erroAtualizacao } = await admin
       .from('pessoas')
       .update({
         nome,
@@ -134,7 +138,7 @@ async function buscarOuCriarPessoaVisitante({
     return pessoaExistente.id as string
   }
 
-  const { data: novaPessoa, error: erroPessoa } = await supabase
+  const { data: novaPessoa, error: erroPessoa } = await admin
     .from('pessoas')
     .insert({
       nome,
@@ -157,6 +161,7 @@ export async function criarVisitante(formData: FormData) {
     'Visitantes',
     'criar'
   )
+  const admin = createAdminClient()
 
   const nome = String(formData.get('nome') ?? '').trim()
   const telefoneBruto = String(formData.get('telefone') ?? '').trim()
@@ -185,7 +190,7 @@ export async function criarVisitante(formData: FormData) {
   const motivo = motivoSelect === 'outros' ? motivoOutro : motivoSelect
 
   try {
-    await encerrarVisitantesExpirados(supabase)
+    await encerrarVisitantesExpirados(supabase, admin)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro ao atualizar visitantes expirados'
     redirect(`/visitantes?message=${encodeURIComponent(msg)}`)
@@ -194,11 +199,12 @@ export async function criarVisitante(formData: FormData) {
   const { data, hora } = agoraBrasil()
   const pessoaId = await buscarOuCriarPessoaVisitante({
     supabase,
+    admin,
     nome,
     telefone,
   })
 
-  const { data: visitanteCriado, error } = await supabase
+  const { data: visitanteCriado, error } = await admin
     .from('visitantes')
     .insert({
       nome,
@@ -220,7 +226,7 @@ export async function criarVisitante(formData: FormData) {
     redirect(`/visitantes?message=${encodeURIComponent(error.message)}`)
   }
 
-  const { error: visitaError } = await supabase.from('visitante_visitas').insert({
+  const { error: visitaError } = await admin.from('visitante_visitas').insert({
     pessoa_id: pessoaId,
     visitante_id: visitanteCriado.id,
     destino,
@@ -234,7 +240,7 @@ export async function criarVisitante(formData: FormData) {
   })
 
   if (visitaError) {
-    await supabase
+    await admin
       .from('visitantes')
       .update({
         status: 'inativo',
@@ -249,7 +255,7 @@ export async function criarVisitante(formData: FormData) {
   }
 
   if (destino === 'museu' && visitanteCriado) {
-    const { error: museuError } = await supabase.from('museu_visitantes').insert({
+    const { error: museuError } = await admin.from('museu_visitantes').insert({
       visitante_id: visitanteCriado.id,
       nome: visitanteCriado.nome,
       telefone: visitanteCriado.telefone,
@@ -274,6 +280,7 @@ export async function encerrarVisitante(formData: FormData) {
     'Visitantes',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -293,7 +300,7 @@ export async function encerrarVisitante(formData: FormData) {
     redirect('/visitantes?message=Visitante não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('visitantes')
     .update({
       status: 'inativo',
@@ -305,7 +312,7 @@ export async function encerrarVisitante(formData: FormData) {
     redirect(`/visitantes?message=${encodeURIComponent(error.message)}`)
   }
 
-  const { error: visitaError } = await supabase
+  const { error: visitaError } = await admin
     .from('visitante_visitas')
     .update({
       status: 'inativo',
@@ -318,7 +325,7 @@ export async function encerrarVisitante(formData: FormData) {
   }
 
   if (visitante.destino === 'museu') {
-    await supabase
+    await admin
       .from('museu_visitantes')
       .update({
         status: 'inativo',

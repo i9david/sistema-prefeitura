@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type StatusAluno = 'ativo' | 'inativo'
 
@@ -123,7 +124,7 @@ async function buscarOuCriarPessoa({
   telefone,
   dataNascimento,
 }: {
-  supabase: SupabaseTenant
+  supabase: SupabaseTenant | ReturnType<typeof createAdminClient>
   nome: string
   telefone: string
   dataNascimento: string
@@ -198,11 +199,13 @@ async function validarAulaAtiva(
 
 async function sincronizarMatriculaAtiva({
   supabase,
+  admin,
   alunoId,
   aula,
   redirectUrl,
 }: {
   supabase: SupabaseTenant
+  admin: ReturnType<typeof createAdminClient>
   alunoId: string
   aula: AulaAtiva
   redirectUrl: string
@@ -316,7 +319,7 @@ async function sincronizarMatriculaAtiva({
     )
   }
 
-  const { data: novaMatricula, error: erroNovaMatricula } = await supabase
+  const { data: novaMatricula, error: erroNovaMatricula } = await admin
     .from('aluno_matriculas')
     .insert({
       aluno_id: alunoId,
@@ -340,12 +343,12 @@ async function sincronizarMatriculaAtiva({
 }
 
 async function desfazerMatriculaCriada({
-  supabase,
+  admin,
   matriculaId,
   redirectUrl,
   erroOriginal,
 }: {
-  supabase: SupabaseTenant
+  admin: ReturnType<typeof createAdminClient>
   matriculaId: string | null
   redirectUrl: string
   erroOriginal: string
@@ -354,7 +357,7 @@ async function desfazerMatriculaCriada({
     redirect(`${redirectUrl}&message=${encodeURIComponent(erroOriginal)}`)
   }
 
-  const { error: erroRollback } = await supabase
+  const { error: erroRollback } = await admin
     .from('aluno_matriculas')
     .update({
       status: 'trancado',
@@ -379,6 +382,7 @@ export async function criarAluno(formData: FormData) {
     'Alunos',
     'criar'
   )
+  const admin = createAdminClient()
 
   const nome = String(formData.get('nome') ?? '').trim()
   const telefone = normalizarTelefone(String(formData.get('telefone') ?? ''))
@@ -395,13 +399,13 @@ export async function criarAluno(formData: FormData) {
   const aula = await validarAulaAtiva(supabase, aulaId, redirectUrl)
 
   const pessoaId = await buscarOuCriarPessoa({
-    supabase,
+    supabase: admin,
     nome,
     telefone,
     dataNascimento,
   })
 
-  const { data: alunoCriado, error } = await supabase
+  const { data: alunoCriado, error } = await admin
     .from('alunos')
     .insert({
       pessoa_id: pessoaId,
@@ -424,6 +428,7 @@ export async function criarAluno(formData: FormData) {
 
   await sincronizarMatriculaAtiva({
     supabase,
+    admin,
     alunoId: alunoCriado.id,
     aula,
     redirectUrl,
@@ -438,6 +443,7 @@ export async function atualizarAluno(formData: FormData) {
     'Alunos',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const nome = String(formData.get('nome') ?? '').trim()
@@ -471,7 +477,7 @@ export async function atualizarAluno(formData: FormData) {
   let pessoaId = alunoAtual.pessoa_id as string | null
 
   if (pessoaId) {
-    const { error: erroPessoa } = await supabase
+    const { error: erroPessoa } = await admin
       .from('pessoas')
       .update({
         nome,
@@ -485,7 +491,7 @@ export async function atualizarAluno(formData: FormData) {
     }
   } else {
     pessoaId = await buscarOuCriarPessoa({
-      supabase,
+      supabase: admin,
       nome,
       telefone,
       dataNascimento,
@@ -494,12 +500,13 @@ export async function atualizarAluno(formData: FormData) {
 
   const { matriculaCriadaId } = await sincronizarMatriculaAtiva({
     supabase,
+    admin,
     alunoId: id,
     aula,
     redirectUrl,
   })
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('alunos')
     .update({
       pessoa_id: pessoaId,
@@ -513,7 +520,7 @@ export async function atualizarAluno(formData: FormData) {
 
   if (error) {
     await desfazerMatriculaCriada({
-      supabase,
+      admin,
       matriculaId: matriculaCriadaId,
       redirectUrl,
       erroOriginal: error.message,
@@ -529,6 +536,7 @@ export async function inativarAluno(formData: FormData) {
     'Alunos',
     'excluir'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -536,7 +544,7 @@ export async function inativarAluno(formData: FormData) {
     redirect('/alunos?message=Aluno não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('alunos')
     .update({ status: 'inativo' })
     .eq('id', id)
@@ -545,7 +553,7 @@ export async function inativarAluno(formData: FormData) {
     redirect(`/alunos?message=${encodeURIComponent(error.message)}`)
   }
 
-  const { error: erroEncerrarMatricula } = await supabase
+  const { error: erroEncerrarMatricula } = await admin
     .from('aluno_matriculas')
     .update({
       status: 'concluido',
@@ -567,6 +575,7 @@ export async function ativarAluno(formData: FormData) {
     'Alunos',
     'editar'
   )
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -588,7 +597,7 @@ export async function ativarAluno(formData: FormData) {
     redirect('/alunos?message=Aluno não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('alunos')
     .update({ status: 'ativo' })
     .eq('id', id)
@@ -606,6 +615,7 @@ export async function ativarAluno(formData: FormData) {
 
     await sincronizarMatriculaAtiva({
       supabase,
+      admin,
       alunoId: id,
       aula,
       redirectUrl: '/alunos',
