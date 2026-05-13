@@ -28,14 +28,18 @@ type ProfessorRelacionado =
 type VinculoProfessorModalidade = {
   id: string
   modalidade_id: string
+  professor_id: string
   funcao: string
-  professores: ProfessorRelacionado
 }
 
-function getProfessorNome(professores: ProfessorRelacionado) {
+function getProfessorNome(professores: { id: string; nome: string } | { id: string; nome: string }[] | null, professoresLista: { id: string; nome: string }[]) {
   if (!professores) return 'Professor'
   if (Array.isArray(professores)) return professores[0]?.nome ?? 'Professor'
   return professores.nome
+}
+
+function getProfessorNomePorId(professorId: string, professores: { id: string; nome: string }[]) {
+  return professores.find((professor) => professor.id === professorId)?.nome ?? 'Professor'
 }
 
 function cardClassName() {
@@ -84,18 +88,23 @@ export default async function ModalidadesPage({
 
   const { data: vinculosData, error: erroVinculos } = await supabase
     .from('modalidade_professores')
-    .select(`
-      id,
-      modalidade_id,
-      funcao,
-      professores:professor_id!modalidade_professores_professor_id_fkey ( id, nome )
-    `)
+    .select('id, modalidade_id, professor_id, funcao')
 
   if (erroVinculos) {
     redirect(`/modalidades?message=${encodeURIComponent(erroVinculos.message)}`)
   }
 
-  const vinculos = (vinculosData ?? []) as VinculoProfessorModalidade[]
+  const { data: professoresData, error: erroProfessores } = await supabase
+    .from('professores')
+    .select('id, nome')
+    .eq('status', 'ativo')
+
+  if (erroProfessores) {
+    redirect(`/modalidades?message=${encodeURIComponent(erroProfessores.message)}`)
+  }
+
+  const vinculos = (vinculosData ?? []) as { id: string; modalidade_id: string; professor_id: string; funcao: string }[]
+  const professores = (professoresData ?? []) as { id: string; nome: string }[]
 
   const modalidadeEditando = editarId
     ? modalidades?.find((modalidade) => modalidade.id === editarId)
@@ -108,7 +117,7 @@ export default async function ModalidadesPage({
       vinculos
         .filter((vinculo) => vinculo.modalidade_id === modalidadeId)
         .map((vinculo) => {
-          const nomeProfessor = getProfessorNome(vinculo.professores)
+          const nomeProfessor = getProfessorNomePorId(vinculo.professor_id, professores)
           const funcao = vinculo.funcao ? ` (${vinculo.funcao})` : ''
           return `${nomeProfessor}${funcao}`
         }) || []

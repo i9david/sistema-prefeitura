@@ -38,7 +38,9 @@ type ProfessorRelacionado = {
 }
 
 type AulaProfessorRelacionada = {
-  professores: Relacao<ProfessorRelacionado>
+  id: string
+  aula_id: string
+  professor_id: string
 }
 
 type AulaRelacionada = {
@@ -120,19 +122,18 @@ function getModalidade(aula: AulaRelacionada | null) {
   return normalizarRelacao(aula?.modalidades ?? null)
 }
 
-function getProfessores(aula: AulaRelacionada | null) {
+function getProfessores(aula: AulaRelacionada | null, aulaProfessores: AulaProfessorRelacionada[], professores: ProfessorRelacionado[]) {
   if (!aula?.aula_professores) return []
 
-  return aula.aula_professores
-    .map((vinculo) => normalizarRelacao(vinculo.professores))
-    .filter((professor): professor is ProfessorRelacionado => Boolean(professor))
+  const professorIds = aula.aula_professores.map((vinculo) => vinculo.professor_id)
+  return professores.filter((professor) => professorIds.includes(professor.id))
 }
 
-function getProfessoresAulas(aulas: AulaRelacionada[]) {
+function getProfessoresAulas(aulas: AulaRelacionada[], aulaProfessores: AulaProfessorRelacionada[], professores: ProfessorRelacionado[]) {
   const professoresPorId = new Map<string, ProfessorRelacionado>()
 
   aulas.forEach((aula) => {
-    getProfessores(aula).forEach((professor) => {
+    getProfessores(aula, aulaProfessores, professores).forEach((professor) => {
       professoresPorId.set(professor.id, professor)
     })
   })
@@ -144,12 +145,12 @@ function aulaAtendeFiltros(aula: AulaRelacionada, filtros: {
   aulaId: string
   modalidadeId: string
   professorId: string
-}) {
+}, aulaProfessores: AulaProfessorRelacionada[], professores: ProfessorRelacionado[]) {
   if (filtros.aulaId && aula.id !== filtros.aulaId) return false
   if (filtros.modalidadeId && aula.modalidade_id !== filtros.modalidadeId) return false
   if (
     filtros.professorId &&
-    !getProfessores(aula).some((professor) => professor.id === filtros.professorId)
+    !getProfessores(aula, aulaProfessores, professores).some((professor) => professor.id === filtros.professorId)
   ) {
     return false
   }
@@ -232,6 +233,7 @@ export default async function AlunosPage({
     { data: aulasData, error: aulasError },
     { data: modalidadesData, error: modalidadesError },
     { data: professoresData, error: professoresError },
+    { data: aulaProfessoresData, error: aulaProfessoresError },
   ] = await Promise.all([
     supabase
       .from('aulas')
@@ -244,9 +246,7 @@ export default async function AlunosPage({
         horario_fim,
         status,
         modalidades!aulas_modalidade_id_fkey ( id, nome ),
-        aula_professores!aula_professores_aula_id_fkey (
-          professores:professor_id!aula_professores_professor_id_fkey ( id, nome )
-        )
+        aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
       `)
       .eq('status', 'ativa')
       .order('nome', { ascending: true }),
@@ -260,6 +260,9 @@ export default async function AlunosPage({
       .select('id, nome')
       .eq('status', 'ativo')
       .order('nome', { ascending: true }),
+    supabase
+      .from('aula_professores')
+      .select('id, aula_id, professor_id'),
   ])
 
   if (aulasError) {
@@ -274,13 +277,18 @@ export default async function AlunosPage({
     redirect(`/alunos?message=${encodeURIComponent(professoresError.message)}`)
   }
 
+  if (aulaProfessoresError) {
+    redirect(`/alunos?message=${encodeURIComponent(aulaProfessoresError.message)}`)
+  }
+
   const aulas = (aulasData ?? []) as unknown as AulaOpcao[]
   const modalidades = (modalidadesData ?? []) as ModalidadeRelacionada[]
   const professores = (professoresData ?? []) as ProfessorRelacionado[]
+  const aulaProfessores = (aulaProfessoresData ?? []) as AulaProfessorRelacionada[]
 
   const aulasFiltradasIds = aulas
     .filter((aula) => {
-      const professoresDaAula = getProfessores(aula)
+      const professoresDaAula = getProfessores(aula, aulaProfessores, professores)
 
       if (aulaFiltro && aula.id !== aulaFiltro) return false
       if (modalidadeFiltro && aula.modalidade_id !== modalidadeFiltro) return false
@@ -320,9 +328,7 @@ export default async function AlunosPage({
           horario_fim,
           status,
           modalidades!aulas_modalidade_id_fkey ( id, nome ),
-          aula_professores!aula_professores_aula_id_fkey (
-            professores:professor_id!aula_professores_professor_id_fkey ( id, nome )
-          )
+          aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
         )
       ),
       pessoas:pessoa_id!alunos_pessoa_id_fkey (
@@ -340,9 +346,7 @@ export default async function AlunosPage({
         horario_fim,
         status,
         modalidades!aulas_modalidade_id_fkey ( id, nome ),
-        aula_professores!aula_professores_aula_id_fkey (
-          professores:professor_id!aula_professores_professor_id_fkey ( id, nome )
-        )
+        aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
       )
     `)
     .order('nome', { ascending: true })
@@ -369,7 +373,7 @@ export default async function AlunosPage({
                 aulaId: aulaFiltro,
                 modalidadeId: modalidadeFiltro,
                 professorId: professorFiltro,
-              })
+              }, aulaProfessores, professores)
           )
         })
       : alunosBrutos
@@ -411,7 +415,7 @@ export default async function AlunosPage({
     .map((professor) => {
       const alunosDoProfessor = alunos.filter((aluno) =>
         getAulasAtivas(aluno).some((aula) =>
-          getProfessores(aula).some((item) => item.id === professor.id)
+          getProfessores(aula, aulaProfessores, professores).some((item) => item.id === professor.id)
         )
       )
 
@@ -663,7 +667,7 @@ export default async function AlunosPage({
                     {alunos.map((aluno) => {
                       const aulasAtivas = getAulasAtivas(aluno)
                       const pessoa = getPessoa(aluno)
-                      const professoresDasAulas = getProfessoresAulas(aulasAtivas)
+                      const professoresDasAulas = getProfessoresAulas(aulasAtivas, aulaProfessores, professores)
                       const presencas = contarPresencas(frequencias, aluno.id)
                       const faltas = contarFaltas(frequencias, aluno.id)
 
@@ -704,7 +708,7 @@ export default async function AlunosPage({
                             {aulasAtivas.length > 0 ? (
                               <div className="space-y-2">
                                 {aulasAtivas.map((aulaAtiva) => {
-                                  const professores = getProfessores(aulaAtiva)
+                                  const professoresDaAula = getProfessores(aulaAtiva, aulaProfessores, professores)
 
                                   return (
                                     <div key={aulaAtiva.id} className="rounded-xl bg-white px-3 py-2">
@@ -715,8 +719,8 @@ export default async function AlunosPage({
                                         {aulaAtiva.dia_semana} • {aulaAtiva.horario_inicio} às {aulaAtiva.horario_fim}
                                       </div>
                                       <div className="text-xs text-slate-500">
-                                        {professores.length > 0
-                                          ? professores.map((professor) => professor.nome).join(', ')
+                                        {professoresDaAula.length > 0
+                                          ? professoresDaAula.map((professor) => professor.nome).join(', ')
                                           : 'Sem professor'}
                                       </div>
                                     </div>

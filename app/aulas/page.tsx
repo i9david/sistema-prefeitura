@@ -37,7 +37,9 @@ type ProfessorRelacionado =
   | null
 
 type AulaProfessorRelacionada = {
-  professores: ProfessorRelacionado
+  id: string
+  aula_id: string
+  professor_id: string
 }
 
 type Aula = {
@@ -65,11 +67,12 @@ function getProfessorNome(professor: ProfessorRelacionado) {
   return professor.nome
 }
 
-function getProfessoresNomes(aulaProfessores: AulaProfessorRelacionada[] | null) {
-  const nomes =
-    aulaProfessores
-      ?.map((vinculo) => getProfessorNome(vinculo.professores))
-      .filter((nome): nome is string => Boolean(nome)) ?? []
+function getProfessoresNomes(aulaProfessores: AulaProfessorRelacionada[] | null, professores: { id: string; nome: string }[]) {
+  if (!aulaProfessores) return 'Sem professor'
+
+  const nomes = aulaProfessores
+    .map((vinculo) => professores.find((p) => p.id === vinculo.professor_id)?.nome)
+    .filter((nome): nome is string => Boolean(nome))
 
   return nomes.length > 0 ? nomes.join(', ') : 'Sem professor'
 }
@@ -103,18 +106,40 @@ export default async function AulasPage({
 
   if (!user) redirect('/login')
 
-  const {
-    data: modalidades,
-    error: erroModalidades,
-  } = await supabase
-    .from('modalidades')
-    .select('id, nome, status')
-    .eq('status', 'ativa')
-    .order('nome', { ascending: true })
+  const [
+    { data: modalidades, error: erroModalidades },
+    { data: professoresData, error: erroProfessores },
+    { data: aulaProfessoresData, error: erroAulaProfessores },
+  ] = await Promise.all([
+    supabase
+      .from('modalidades')
+      .select('id, nome, status')
+      .eq('status', 'ativa')
+      .order('nome', { ascending: true }),
+    supabase
+      .from('professores')
+      .select('id, nome')
+      .eq('status', 'ativo')
+      .order('nome', { ascending: true }),
+    supabase
+      .from('aula_professores')
+      .select('id, aula_id, professor_id'),
+  ])
 
   if (erroModalidades) {
     redirect(`/aulas?message=${encodeURIComponent(erroModalidades.message)}`)
   }
+
+  if (erroProfessores) {
+    redirect(`/aulas?message=${encodeURIComponent(erroProfessores.message)}`)
+  }
+
+  if (erroAulaProfessores) {
+    redirect(`/aulas?message=${encodeURIComponent(erroAulaProfessores.message)}`)
+  }
+
+  const professores = (professoresData ?? []) as { id: string; nome: string }[]
+  const aulaProfessores = (aulaProfessoresData ?? []) as AulaProfessorRelacionada[]
 
   let query = supabase
     .from('aulas')
@@ -128,9 +153,7 @@ export default async function AulasPage({
       status,
       created_at,
       modalidades!aulas_modalidade_id_fkey ( id, nome ),
-      aula_professores!aula_professores_aula_id_fkey (
-        professores:professor_id!aula_professores_professor_id_fkey ( id, nome )
-      )
+      aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
     `)
     .order('dia_semana', { ascending: true })
     .order('horario_inicio', { ascending: true })
@@ -328,7 +351,7 @@ export default async function AulasPage({
                       {getModalidadeNome(aula.modalidades)}
                     </td>
                     <td className="px-4 py-3">
-                      {getProfessoresNomes(aula.aula_professores)}
+                      {getProfessoresNomes(aula.aula_professores, professores)}
                     </td>
                     <td className="px-4 py-3">{aula.dia_semana}</td>
                     <td className="px-4 py-3">{aula.horario_inicio}</td>
@@ -416,7 +439,7 @@ export default async function AulasPage({
                           {getModalidadeNome(aula.modalidades)}
                         </p>
                         <p className="mt-1 text-sm text-slate-600">
-                          {getProfessoresNomes(aula.aula_professores)}
+                          {getProfessoresNomes(aula.aula_professores, professores)}
                         </p>
                         <p className="mt-2 text-sm font-medium text-slate-800">
                           {aula.horario_inicio} às {aula.horario_fim}

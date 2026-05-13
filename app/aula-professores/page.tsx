@@ -16,22 +16,18 @@ type RelacaoItem =
 
 type Vinculo = {
   id: string
+  aula_id: string
+  professor_id: string
   funcao: string
   created_at: string
-  aulas: RelacaoItem
-  professores: RelacaoItem
 }
 
-function getRelacaoId(relacao: RelacaoItem) {
-  if (!relacao) return ''
-  if (Array.isArray(relacao)) return relacao[0]?.id ?? ''
-  return relacao.id
+function getAulaNome(vinculo: Vinculo, aulas: { id: string; nome: string }[]) {
+  return aulas.find((a) => a.id === vinculo.aula_id)?.nome ?? 'Aula não encontrada'
 }
 
-function getRelacaoNome(relacao: RelacaoItem, fallback: string) {
-  if (!relacao) return fallback
-  if (Array.isArray(relacao)) return relacao[0]?.nome ?? fallback
-  return relacao.nome
+function getProfessorNome(vinculo: Vinculo, professores: { id: string; nome: string }[]) {
+  return professores.find((p) => p.id === vinculo.professor_id)?.nome ?? 'Professor não encontrado'
 }
 
 function cardClassName() {
@@ -62,8 +58,8 @@ export default async function AulaProfessoresPage({
   if (!user) redirect('/login')
 
   const [
-    { data: aulas, error: erroAulas },
-    { data: professores, error: erroProfessores },
+    { data: aulasData, error: erroAulas },
+    { data: professoresData, error: erroProfessores },
     { data: vinculosData, error: erroVinculos },
   ] = await Promise.all([
     supabase
@@ -80,13 +76,7 @@ export default async function AulaProfessoresPage({
 
     supabase
       .from('aula_professores')
-      .select(`
-        id,
-        funcao,
-        created_at,
-        aulas:aula_id!aula_professores_aula_id_fkey ( id, nome ),
-        professores:professor_id!aula_professores_professor_id_fkey ( id, nome )
-      `)
+      .select('id, aula_id, professor_id, funcao, created_at')
       .order('created_at', { ascending: false }),
   ])
 
@@ -102,6 +92,8 @@ export default async function AulaProfessoresPage({
     redirect(`/aula-professores?message=${encodeURIComponent(erroVinculos.message)}`)
   }
 
+  const aulas = (aulasData ?? []) as { id: string; nome: string; status: string }[]
+  const professores = (professoresData ?? []) as { id: string; nome: string; status: string }[]
   const vinculos = (vinculosData ?? []) as Vinculo[]
 
   const vinculoEditando = editarId
@@ -169,7 +161,7 @@ export default async function AulaProfessoresPage({
                     name="aula_id"
                     required
                     className="w-full rounded-2xl border px-4 py-3"
-                    defaultValue={getRelacaoId(vinculoEditando?.aulas ?? null)}
+                    defaultValue={vinculoEditando?.aula_id ?? ''}
                   >
                     <option value="" disabled>
                       Selecione a aula
@@ -190,7 +182,7 @@ export default async function AulaProfessoresPage({
                     name="professor_id"
                     required
                     className="w-full rounded-2xl border px-4 py-3"
-                    defaultValue={getRelacaoId(vinculoEditando?.professores ?? null)}
+                    defaultValue={vinculoEditando?.professor_id ?? ''}
                   >
                     <option value="" disabled>
                       Selecione o professor
@@ -279,10 +271,10 @@ export default async function AulaProfessoresPage({
                     {vinculos.map((vinculo) => (
                       <tr key={vinculo.id} className="border-b">
                         <td className="px-4 py-3 font-medium text-slate-900">
-                          {getRelacaoNome(vinculo.aulas, 'Aula')}
+                          {getAulaNome(vinculo, aulas)}
                         </td>
                         <td className="px-4 py-3">
-                          {getRelacaoNome(vinculo.professores, 'Professor')}
+                          {getProfessorNome(vinculo, professores)}
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-block rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">

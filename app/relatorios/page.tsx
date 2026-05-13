@@ -21,11 +21,6 @@ type Aula = {
   id: string
   nome: string
   modalidade_id: string
-  aula_professores: AulaProfessor[] | null
-}
-
-type AulaProfessor = {
-  professor_id: string
 }
 
 type Aluno = {
@@ -125,14 +120,7 @@ export default async function RelatoriosPage({
 
   const { data: aulasData, error: aulasError } = await supabase
     .from('aulas')
-    .select(`
-      id,
-      nome,
-      modalidade_id,
-      aula_professores!aula_professores_aula_id_fkey (
-        professor_id
-      )
-    `)
+    .select('id, nome, modalidade_id')
     .eq('status', 'ativa')
     .order('nome', { ascending: true })
 
@@ -140,14 +128,23 @@ export default async function RelatoriosPage({
     redirect(`/relatorios?message=${encodeURIComponent(aulasError.message)}`)
   }
 
+  const { data: aulaProfessoresData, error: aulaProfessoresError } = await supabase
+    .from('aula_professores')
+    .select('aula_id, professor_id')
+
+  if (aulaProfessoresError) {
+    redirect(`/relatorios?message=${encodeURIComponent(aulaProfessoresError.message)}`)
+  }
+
   const modalidades = (modalidadesData ?? []) as Modalidade[]
   let aulas = (aulasData ?? []) as Aula[]
+  const aulaProfessores = (aulaProfessoresData ?? []) as { aula_id: string; professor_id: string }[]
 
   if (usuarioInterno.professor_id) {
     aulas = aulas.filter(
       (aula) =>
-        aula.aula_professores?.some(
-          (vinculo) => vinculo.professor_id === usuarioInterno.professor_id
+        aulaProfessores.some(
+          (vinculo) => vinculo.aula_id === aula.id && vinculo.professor_id === usuarioInterno.professor_id
         )
     )
   }
