@@ -17,7 +17,6 @@ type MatriculaAtiva = {
   modalidade_id: string
   data_inicio: string
   data_fim: string | null
-  aulas: AulaDaMatricula | AulaDaMatricula[] | null
 }
 
 type AulaDaMatricula = {
@@ -25,6 +24,13 @@ type AulaDaMatricula = {
   dia_semana: string
   horario_inicio: string
   horario_fim: string
+}
+
+function obterAulaDaMatricula(
+  matricula: MatriculaAtiva,
+  aulasById: Map<string, AulaDaMatricula>
+) {
+  return aulasById.get(matricula.aula_id) ?? null
 }
 
 type AulaAtiva = {
@@ -89,7 +95,7 @@ function horariosSeSobrepoem({
 }
 
 function aulasTemConflitoDeHorario(
-  aulaAtual: MatriculaAtiva['aulas'],
+  aulaAtual: AulaDaMatricula | null,
   novaAula: AulaAtiva
 ) {
   const aula = Array.isArray(aulaAtual) ? aulaAtual[0] : aulaAtual
@@ -203,19 +209,7 @@ async function sincronizarMatriculaAtiva({
 }): Promise<ResultadoSincronizacaoMatricula> {
   const { data: matriculasAtivas, error: erroMatriculas } = await supabase
     .from('aluno_matriculas')
-    .select(`
-      id,
-      aula_id,
-      modalidade_id,
-      data_inicio,
-      data_fim,
-      aulas:aula_id!aluno_matriculas_aula_id_fkey (
-        id,
-        dia_semana,
-        horario_inicio,
-        horario_fim
-      )
-    `)
+    .select('id, aula_id, modalidade_id, data_inicio, data_fim')
     .eq('aluno_id', alunoId)
     .eq('status', 'ativo')
 
@@ -224,6 +218,25 @@ async function sincronizarMatriculaAtiva({
   }
 
   const matriculas = (matriculasAtivas ?? []) as MatriculaAtiva[]
+  const aulaIdsAtivas = Array.from(
+    new Set(matriculas.map((matricula) => matricula.aula_id).filter(Boolean))
+  )
+
+  const { data: aulasAtivas, error: erroAulasAtivas } =
+    aulaIdsAtivas.length > 0
+      ? await supabase
+          .from('aulas')
+          .select('id, dia_semana, horario_inicio, horario_fim')
+          .in('id', aulaIdsAtivas)
+      : { data: [], error: null }
+
+  if (erroAulasAtivas) {
+    redirect(`${redirectUrl}&message=${encodeURIComponent(erroAulasAtivas.message)}`)
+  }
+
+  const aulasById = new Map(
+    (aulasAtivas ?? []).map((aula) => [aula.id, aula as AulaDaMatricula])
+  )
   const hoje = dataHoje()
   const matriculaAtual = matriculas.find(
     (matricula) =>
@@ -269,7 +282,7 @@ async function sincronizarMatriculaAtiva({
         novoInicio: hoje,
         novoFim: null,
       }) &&
-      aulasTemConflitoDeHorario(matricula.aulas, aula)
+      aulasTemConflitoDeHorario(obterAulaDaMatricula(matricula, aulasById), aula)
   )
 
   if (matriculaComConflitoDeHorario) {
