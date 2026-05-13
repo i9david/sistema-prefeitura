@@ -165,10 +165,7 @@ export default async function RelatoriosPage({
           .from('aluno_matriculas')
           .select(`
             aula_id,
-            alunos:aluno_id!aluno_matriculas_aluno_id_fkey (
-              id,
-              nome
-            )
+            aluno_id
           `)
           .eq('status', 'ativo')
           .in('aula_id', aulaIdsPermitidos)
@@ -178,19 +175,39 @@ export default async function RelatoriosPage({
     redirect(`/relatorios?message=${encodeURIComponent(matriculasError.message)}`)
   }
 
+  const alunoIdsFromMatriculas = Array.from(
+    new Set(
+      ((matriculasBase ?? []) as any[])
+        .map((matricula) => matricula.aluno_id)
+        .filter(Boolean)
+    )
+  )
+
+  const { data: alunosDetalhesData, error: alunosDetalhesError } =
+    alunoIdsFromMatriculas.length > 0
+      ? await supabase
+          .from('alunos')
+          .select('id, nome')
+          .in('id', alunoIdsFromMatriculas)
+      : { data: [], error: null }
+
+  if (alunosDetalhesError) {
+    redirect(`/relatorios?message=${encodeURIComponent(alunosDetalhesError.message)}`)
+  }
+
+  const alunosDetalhesMap = new Map(
+    ((alunosDetalhesData ?? []) as any[]).map((aluno) => [aluno.id, aluno])
+  )
+
   let alunos = ((matriculasBase ?? []) as MatriculaAluno[])
     .map((matricula) => {
-      if (!matricula.alunos) return null
-      const aluno = Array.isArray(matricula.alunos)
-        ? matricula.alunos[0] ?? null
-        : matricula.alunos
-
-      if (!aluno) return null
+      const alunoDetalhes = alunosDetalhesMap.get((matricula as any).aluno_id)
+      if (!alunoDetalhes) return null
 
       return {
-        id: aluno.id,
-        nome: aluno.nome,
-        aula_id: matricula.aula_id,
+        id: alunoDetalhes.id,
+        nome: alunoDetalhes.nome,
+        aula_id: (matricula as any).aula_id,
       }
     })
     .filter((aluno): aluno is Aluno => Boolean(aluno))

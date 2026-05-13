@@ -252,8 +252,7 @@ export default async function AlunosPage({
         horario_inicio,
         horario_fim,
         status,
-        modalidades!aulas_modalidade_id_fkey ( id, nome ),
-        aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
+        modalidades!aulas_modalidade_id_fkey ( id, nome )
       `)
       .eq('status', 'ativa')
       .order('nome', { ascending: true }),

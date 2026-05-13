@@ -167,19 +167,39 @@ export default async function ProfessoresPage({
     .select(`
       id,
       professor_id,
-      aulas:aula_id!aula_professores_aula_id_fkey (
-        id,
-        nome,
-        dia_semana,
-        horario_inicio,
-        horario_fim,
-        status
-      )
+      aula_id
     `)
     .order('professor_id', { ascending: true })
 
   if (erroAulas) {
     redirect(`/professores?message=${encodeURIComponent(erroAulas.message)}`)
+  }
+
+  const aulaProfessorIds = Array.from(
+    new Set(
+      ((aulasData ?? []) as any[])
+        .map((vinculo) => vinculo.aula_id)
+        .filter(Boolean)
+    )
+  )
+
+  const { data: aulasDetalhesData, error: erroAulasDetalhes } =
+    aulaProfessorIds.length > 0
+      ? await supabase
+          .from('aulas')
+          .select(`
+            id,
+            nome,
+            dia_semana,
+            horario_inicio,
+            horario_fim,
+            status
+          `)
+          .in('id', aulaProfessorIds)
+      : { data: [], error: null }
+
+  if (erroAulasDetalhes) {
+    redirect(`/professores?message=${encodeURIComponent(erroAulasDetalhes.message)}`)
   }
 
   const { data: usuariosData, error: erroUsuarios } = await supabase
@@ -191,7 +211,20 @@ export default async function ProfessoresPage({
   }
 
   const vinculos = (vinculosData ?? []) as VinculoProfessor[]
-  const aulas = (aulasData ?? []) as VinculoAulaProfessor[]
+  const aulasVinculosRaw = (aulasData ?? []) as any[]
+  const aulasDetalhes = new Map(
+    ((aulasDetalhesData ?? []) as any[]).map((aula) => [aula.id, aula])
+  )
+  
+  const aulas = aulasVinculosRaw.map((vinculo) => {
+    const aulaDetalhes = aulasDetalhes.get(vinculo.aula_id)
+    return {
+      id: vinculo.id,
+      professor_id: vinculo.professor_id,
+      aulas: aulaDetalhes || null,
+    }
+  })
+
   const usuariosSistema = (usuariosData ?? []) as UsuarioSistema[]
   const modalidades = modalidadesData ?? []
 

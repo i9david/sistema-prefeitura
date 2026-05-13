@@ -152,8 +152,7 @@ export default async function AulasPage({
       horario_fim,
       status,
       created_at,
-      modalidades!aulas_modalidade_id_fkey ( id, nome ),
-      aula_professores!aula_professores_aula_id_fkey ( id, aula_id, professor_id )
+      modalidades!aulas_modalidade_id_fkey ( id, nome )
     `)
     .order('dia_semana', { ascending: true })
     .order('horario_inicio', { ascending: true })

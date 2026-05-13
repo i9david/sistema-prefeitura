@@ -132,11 +132,11 @@ export default async function FrequenciaPage({
     ? await supabase
         .from('aluno_matriculas')
         .select(`
-          alunos:aluno_id!aluno_matriculas_aluno_id_fkey (
-            id,
-            nome,
-            status
-          )
+          id,
+          aluno_id,
+          status,
+          data_inicio,
+          data_fim
         `)
         .eq('aula_id', aulaSelecionada.id)
         .eq('status', 'ativo')
@@ -149,11 +149,34 @@ export default async function FrequenciaPage({
     redirect(`/frequencia?message=${encodeURIComponent(erroMatriculas.message)}`)
   }
 
+  const alunoIds = Array.from(
+    new Set(
+      ((matriculasData ?? []) as any[])
+        .map((matricula) => matricula.aluno_id)
+        .filter(Boolean)
+    )
+  )
+
+  const { data: alunosDetalhesData, error: erroAlunosDetalhes } =
+    alunoIds.length > 0
+      ? await supabase
+          .from('alunos')
+          .select('id, nome, status')
+          .in('id', alunoIds)
+      : { data: [], error: null }
+
+  if (erroAlunosDetalhes) {
+    redirect(`/frequencia?message=${encodeURIComponent(erroAlunosDetalhes.message)}`)
+  }
+
+  const alunosDetalhesMap = new Map(
+    ((alunosDetalhesData ?? []) as any[]).map((aluno) => [aluno.id, aluno])
+  )
+
   let alunos = ((matriculasData ?? []) as MatriculaAluno[])
     .map((matricula) => {
-      if (!matricula.alunos) return null
-      if (Array.isArray(matricula.alunos)) return matricula.alunos[0] ?? null
-      return matricula.alunos
+      const alunoDetalhes = alunosDetalhesMap.get((matricula as any).aluno_id)
+      return alunoDetalhes
     })
     .filter((aluno): aluno is Aluno => Boolean(aluno && aluno.status === 'ativo'))
 
