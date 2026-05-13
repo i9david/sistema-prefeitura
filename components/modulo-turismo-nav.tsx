@@ -1,24 +1,20 @@
-import { ModuloNav } from '@/components/modulo-nav'
+import { ModuleSidebar } from '@/components/module/module-sidebar'
+import { getModuleConfig } from '@/config/modules'
 
 type ModuloTurismoNavProps = {
   currentPath?: string
 }
 
-export function ModuloTurismoNav({
-  currentPath = '',
-}: ModuloTurismoNavProps) {
+export function ModuloTurismoNav({ currentPath = '' }: ModuloTurismoNavProps) {
+  const config = getModuleConfig('turismo')
+
   return (
-    <ModuloNav
-      titulo="Turismo"
+    <ModuleSidebar
+      title={config.title}
       currentPath={currentPath}
-      cor="verde"
-      itens={[
-        { label: 'Visão do módulo', href: '/turismo' },
-        { label: 'Pontos turísticos', href: '/turismo/pontos' },
-        { label: 'Demandas', href: '/turismo/demandas' },
-        { label: 'Visitantes', href: '/turismo/visitantes' },
-        { label: 'Relatórios', href: '/turismo/relatorios' },
-      ]}
+      groups={config.groups}
+      accent={config.accent}
+      context="Desenvolvimento turístico"
     />
   )
 }

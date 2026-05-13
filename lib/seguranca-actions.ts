@@ -1,13 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { getContextoPermissoes } from '@/lib/get-permissoes'
 import { podeAcessar } from '@/lib/permissoes'
 
@@ -43,11 +37,7 @@ export async function exigirPermissaoAction(
   )
 
   if (!permitido) {
-    redirect(
-      `/dashboard?message=${encodeURIComponent(
-        'Você não tem permissão para executar esta ação'
-      )}`
-    )
+    redirect('/sem-permissao')
   }
 
   return {

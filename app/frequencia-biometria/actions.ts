@@ -1,13 +1,23 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+
+type Relacao<T> = T | T[] | null
+
+type AulaBiometria = {
+  id: string
+  nome: string
+  dia_semana: string
+  horario_inicio: string
+  horario_fim: string
+  status: string
+}
+
+type MatriculaBiometria = {
+  aula_id: string
+  aulas: Relacao<AulaBiometria>
+}
 
 const diasSemanaMap: Record<number, string> = {
   0: 'Domingo',
@@ -61,6 +71,25 @@ function horaDentroDaAula(horaAtual: string, inicio: string, fim: string) {
   return horaAtual >= inicio && horaAtual <= fim
 }
 
+function normalizarRelacao<T>(relacao: Relacao<T>) {
+  if (!relacao) return null
+  if (Array.isArray(relacao)) return relacao[0] ?? null
+  return relacao
+}
+
+function aulaValidaNoMomento(
+  aula: AulaBiometria | null,
+  diaSemana: string,
+  hora: string
+) {
+  return Boolean(
+    aula &&
+      aula.status === 'ativa' &&
+      aula.dia_semana === diaSemana &&
+      horaDentroDaAula(hora, aula.horario_inicio, aula.horario_fim)
+  )
+}
+
 export async function registrarPresencaBiometria(formData: FormData) {
   const identificadorBiometrico = String(
     formData.get('identificador_biometrico') ?? ''
@@ -102,15 +131,54 @@ export async function registrarPresencaBiometria(formData: FormData) {
     redirect('/frequencia-biometria?message=Aluno não encontrado ou inativo')
   }
 
-  const { data: aula, error: aulaError } = await supabase
-    .from('aulas')
-    .select('id, nome, dia_semana, horario_inicio, horario_fim, status')
-    .eq('id', aluno.aula_id)
-    .maybeSingle()
+  const { data: matriculasAtivas, error: matriculaError } = await supabase
+    .from('aluno_matriculas')
+    .select(`
+      aula_id,
+      aulas:aula_id!aluno_matriculas_aula_id_fkey (
+        id,
+        nome,
+        dia_semana,
+        horario_inicio,
+        horario_fim,
+        status
+      )
+    `)
+    .eq('aluno_id', aluno.id)
+    .eq('status', 'ativo')
+    .lte('data_inicio', data)
+    .or(`data_fim.is.null,data_fim.gte.${data}`)
+
+  if (matriculaError) {
+    redirect(`/frequencia-biometria?message=${encodeURIComponent(matriculaError.message)}`)
+  }
+
+  const matriculas = (matriculasAtivas ?? []) as unknown as MatriculaBiometria[]
+  const aulaDaMatricula = normalizarRelacao(
+    matriculas
+      .map((matricula) => normalizarRelacao(matricula.aulas))
+      .find((aula) => aulaValidaNoMomento(aula, diaSemana, hora)) ?? null
+  )
+
+  const aulaId = aulaDaMatricula?.id ?? aluno.aula_id
+
+  if (!aulaId) {
+    redirect('/frequencia-biometria?message=Aluno sem matrícula ativa')
+  }
+
+  const { data: aulaLegado, error: aulaError } = aulaDaMatricula
+    ? { data: null, error: null }
+    : await supabase
+        .from('aulas')
+        .select('id, nome, dia_semana, horario_inicio, horario_fim, status')
+        .eq('id', aulaId)
+        .maybeSingle()
 
   if (aulaError) {
     redirect(`/frequencia-biometria?message=${encodeURIComponent(aulaError.message)}`)
   }
+
+  const aula = aulaDaMatricula ?? aulaLegado
 
   if (!aula || aula.status !== 'ativa') {
     redirect('/frequencia-biometria?message=Turma não encontrada ou inativa')

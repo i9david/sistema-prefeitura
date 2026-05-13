@@ -1,4 +1,5 @@
-import { ModuloNav } from '@/components/modulo-nav'
+import { ModuleSidebar } from '@/components/module/module-sidebar'
+import { getModuleConfig } from '@/config/modules'
 
 type ModuloCaptacaoNavProps = {
   currentPath?: string
@@ -7,21 +8,15 @@ type ModuloCaptacaoNavProps = {
 export function ModuloCaptacaoNav({
   currentPath = '',
 }: ModuloCaptacaoNavProps) {
+  const config = getModuleConfig('projetos-captacao')
+
   return (
-    <ModuloNav
-      titulo="Projetos e Captação"
+    <ModuleSidebar
+      title={config.title}
       currentPath={currentPath}
-      cor="roxo"
-      itens={[
-        { label: 'Visão do módulo', href: '/projetos-captacao' },
-        { label: 'Projetos', href: '/projetos-captacao/projetos' },
-        { label: 'Análise técnica', href: '/projetos-captacao/analises' },
-        { label: 'Fontes de recursos', href: '/projetos-captacao/fontes' },
-        { label: 'Oportunidades', href: '/projetos-captacao/oportunidades' },
-        { label: 'Radar automático', href: '/projetos-captacao/radar' },
-        { label: 'Matching', href: '/projetos-captacao/matching' },
-        { label: 'Relatórios', href: '/projetos-captacao/relatorios' },
-      ]}
+      groups={config.groups}
+      accent={config.accent}
+      context="Estratégia e recursos"
     />
   )
 }

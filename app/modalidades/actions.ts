@@ -1,15 +1,15 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
+import { exigirPermissaoAction } from '@/lib/seguranca-actions'
 
 export async function criarModalidade(formData: FormData) {
+  const { supabase } = await exigirPermissaoAction(
+    'Centro Cultural',
+    'Modalidades',
+    'criar'
+  )
+
   const nome = String(formData.get('nome') ?? '').trim()
   const descricao = String(formData.get('descricao') ?? '').trim()
   const status = String(formData.get('status') ?? '').trim()
@@ -17,8 +17,6 @@ export async function criarModalidade(formData: FormData) {
   if (!nome || !status) {
     redirect('/modalidades?message=Preencha todos os campos obrigatórios')
   }
-
-  const supabase = await createClient()
 
   const { error } = await supabase.from('modalidades').insert({
     nome,
@@ -34,6 +32,12 @@ export async function criarModalidade(formData: FormData) {
 }
 
 export async function atualizarModalidade(formData: FormData) {
+  const { supabase } = await exigirPermissaoAction(
+    'Centro Cultural',
+    'Modalidades',
+    'editar'
+  )
+
   const id = String(formData.get('id') ?? '').trim()
   const nome = String(formData.get('nome') ?? '').trim()
   const descricao = String(formData.get('descricao') ?? '').trim()
@@ -42,8 +46,6 @@ export async function atualizarModalidade(formData: FormData) {
   if (!id || !nome || !status) {
     redirect('/modalidades?message=Preencha todos os campos obrigatórios')
   }
-
-  const supabase = await createClient()
 
   const { error } = await supabase
     .from('modalidades')
@@ -62,13 +64,17 @@ export async function atualizarModalidade(formData: FormData) {
 }
 
 export async function inativarModalidade(formData: FormData) {
+  const { supabase } = await exigirPermissaoAction(
+    'Centro Cultural',
+    'Modalidades',
+    'excluir'
+  )
+
   const id = String(formData.get('id') ?? '').trim()
 
   if (!id) {
     redirect('/modalidades?message=Modalidade não encontrada')
   }
-
-  const supabase = await createClient()
 
   const { error } = await supabase
     .from('modalidades')
@@ -83,13 +89,17 @@ export async function inativarModalidade(formData: FormData) {
 }
 
 export async function ativarModalidade(formData: FormData) {
+  const { supabase } = await exigirPermissaoAction(
+    'Centro Cultural',
+    'Modalidades',
+    'editar'
+  )
+
   const id = String(formData.get('id') ?? '').trim()
 
   if (!id) {
     redirect('/modalidades?message=Modalidade não encontrada')
   }
-
-  const supabase = await createClient()
 
   const { error } = await supabase
     .from('modalidades')

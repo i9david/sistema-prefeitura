@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-}
+import { CalendarDays, ExternalLink, Plus } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuloAdministrativoNav } from '@/components/modulo-administrativo-nav'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
+import { getTenantPath } from '@/lib/tenant-paths-server'
 
 export default async function AdministrativoAgendaPage() {
   const supabase = await createClient()
@@ -29,88 +30,70 @@ export default async function AdministrativoAgendaPage() {
     `https://calendar.google.com/calendar/u/0/r/eventedit?cid=${encodeURIComponent(calendarId)}`
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        
-        {/* ✅ SIDEBAR CORRETO */}
-        <Sidebar currentPath="/administrativo/agenda" />
+    <ModuleLayout sidebar={<ModuloAdministrativoNav currentPath="/administrativo/agenda" />}>
+      <ModuleHeader
+        title="Agenda Institucional"
+        eyebrow="Operação"
+        description="Agenda oficial integrada ao Google Agenda da Secretaria."
+        icon={CalendarDays}
+        accent="blue"
+        context="Compromissos institucionais"
+        action={
+          <div className="flex flex-wrap gap-3">
+            <Link href={getTenantPath('/administrativo')} className="btn-secondary">
+              Voltar ao módulo
+            </Link>
 
-        <section className="space-y-6">
-          
-          {/* HEADER */}
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900">
-                  Agenda Institucional
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Agenda oficial integrada ao Google Agenda da Secretaria
-                </p>
-              </div>
+            <a
+              href={googleCalendarManageUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary"
+            >
+              <ExternalLink size={16} aria-hidden="true" />
+              Gerenciar agenda
+            </a>
 
-              <div className="flex flex-wrap gap-3">
-
-                <Link
-                  href="/administrativo"
-                  className="rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  Voltar ao módulo
-                </Link>
-
-                <a
-                  href={googleCalendarManageUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  Gerenciar agenda
-                </a>
-
-                <a
-                  href={googleCalendarCreateEventUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700"
-                >
-                  Criar evento
-                </a>
-
-              </div>
-            </div>
+            <a
+              href={googleCalendarCreateEventUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-primary"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Criar evento
+            </a>
           </div>
+        }
+      />
 
-          {/* CALENDÁRIO */}
-          <div className={cardClassName()}>
-            <div className="mb-5">
-              <h2 className="text-xl font-bold text-slate-900">
-                Visualização da agenda
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Alterações feitas no Google Agenda aparecem aqui automaticamente
-              </p>
-            </div>
+      <ModuleCard>
+        <div className="mb-5">
+          <h2 className="text-xl font-bold text-slate-900">
+            Visualização da agenda
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Alterações feitas no Google Agenda aparecem aqui automaticamente.
+          </p>
+        </div>
 
-            {calendarEmbedUrl ? (
-              <div className="overflow-hidden rounded-3xl border border-slate-200">
-                <iframe
-                  src={calendarEmbedUrl}
-                  width="100%"
-                  height="720"
-                  className="w-full"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                />
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-slate-100 p-5 text-sm text-slate-700">
-                Agenda não configurada. Configure no arquivo <strong>.env.local</strong>.
-              </div>
-            )}
+        {calendarEmbedUrl ? (
+          <div className="overflow-hidden rounded-lg border border-slate-200">
+            <iframe
+              src={calendarEmbedUrl}
+              width="100%"
+              height="720"
+              className="w-full"
+              style={{ border: 0 }}
+              loading="lazy"
+            />
           </div>
-
-        </section>
-      </div>
-    </main>
+        ) : (
+          <div className="rounded-lg bg-slate-100 p-5 text-sm text-slate-700">
+            Agenda não configurada. Configure no arquivo <strong>.env.local</strong>.
+          </div>
+        )}
+      </ModuleCard>
+    </ModuleLayout>
   )
 }

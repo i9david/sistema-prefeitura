@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
 
 type ModuloItem = {
   label: string
@@ -24,53 +25,43 @@ export function ModuloLayout({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <h2 className="text-2xl font-bold text-slate-900">{titulo}</h2>
+    <main className="app-shell">
+      <div className="app-container grid gap-5 lg:grid-cols-[280px_1fr]">
+        <aside className="sidebar-shell">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">
+              Módulo
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-slate-950">{titulo}</h2>
+          </div>
 
-          <div className="mt-5 space-y-2">
-            <Link
-              href="/"
-              className="block rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              ← Voltar ao início
-            </Link>
-
-            <Link
-              href="/login"
-              className="block rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
-            >
-              Sair do sistema
+          <div className="mt-4">
+            <Link href="/" className="btn-ghost w-full justify-start">
+              <ChevronLeft size={16} />
+              Voltar ao início
             </Link>
           </div>
 
           {itens.length > 0 && (
-            <div className="mt-6">
-              <p className="mb-2 px-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                Navegação do módulo
-              </p>
+            <nav className="mt-5 space-y-1.5">
+              <p className="sidebar-section-label">Navegação</p>
 
-              <nav className="space-y-1.5">
-                {itens.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`block rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                      isActive(item.href)
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
+              {itens.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`sidebar-link ${
+                    isActive(item.href) ? 'sidebar-link-active' : ''
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           )}
         </aside>
 
-        <section>{children}</section>
+        <section className="min-w-0">{children}</section>
       </div>
     </main>
   )

@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 
 export async function registrarComunicacao(formData: FormData) {
   const supabase = await createClient()

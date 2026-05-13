@@ -1,12 +1,23 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
+import { FormField } from '@/components/form'
 
 type InputTelefoneProps = {
   defaultValue?: string
+  name?: string
+  label?: string
+  prefix?: string
+  required?: boolean
 }
 
-export function InputTelefone({ defaultValue = '' }: InputTelefoneProps) {
+function InputTelefoneInner({
+  defaultValue = '',
+  name = 'telefone',
+  label = 'WhatsApp',
+  prefix = 'WhatsApp',
+  required = true,
+}: InputTelefoneProps) {
   function somenteNumeros(valor: string) {
     return valor.replace(/\D/g, '').slice(0, 11)
   }
@@ -35,14 +46,10 @@ export function InputTelefone({ defaultValue = '' }: InputTelefoneProps) {
   const telefoneLimpo = somenteNumeros(valor)
 
   return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-slate-700">
-        WhatsApp
-      </label>
-
+    <FormField label={label}>
       <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-green-600">
-          WhatsApp
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-green-700">
+          {prefix}
         </span>
 
         <input
@@ -50,14 +57,16 @@ export function InputTelefone({ defaultValue = '' }: InputTelefoneProps) {
           placeholder="(64) 99999-9999"
           value={valor}
           onChange={(e) => setValor(formatarTelefone(e.target.value))}
-          className="w-full rounded-2xl border py-3 pl-28 pr-4"
+          className="form-control pl-24"
           inputMode="numeric"
           autoComplete="tel"
-          required
+          required={required}
         />
 
-        <input type="hidden" name="telefone" value={telefoneLimpo} />
+        <input type="hidden" name={name} value={telefoneLimpo} />
       </div>
-    </div>
+    </FormField>
   )
 }
+
+export const InputTelefone = memo(InputTelefoneInner)

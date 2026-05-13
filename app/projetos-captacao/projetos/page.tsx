@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { ClipboardCheck, FolderKanban, Lightbulb, Plus, Wallet } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCaptacaoNav } from '@/components/modulo-captacao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import {
   atualizarProjetoCaptacao,
   criarProjetoCaptacao,
@@ -29,10 +28,6 @@ type Projeto = {
   prazo_desejado: string | null
   observacoes: string | null
   created_at: string | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarMoeda(valor: number | null | undefined) {
@@ -188,39 +183,32 @@ export default async function ProjetosCaptacaoProjetosPage({
 
   const totalIdeias = projetos.filter((item) => item.status === 'ideia').length
   const totalAnalise = projetos.filter((item) => item.status === 'em_analise').length
-  const totalAprovados = projetos.filter((item) => item.status === 'aprovado').length
   const valorTotal = projetos.reduce((acc, item) => acc + Number(item.valor_estimado || 0), 0)
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCaptacaoNav currentPath="/projetos-captacao/projetos" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Projetos
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Cadastre ideias, propostas e projetos para análise técnica e busca de recursos.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/projetos-captacao/projetos?novo=1"
-                  className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Novo projeto
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloCaptacaoNav currentPath="/projetos-captacao/projetos" />}>
+      <ModuleHeader
+        title="Projetos"
+        eyebrow="Cadastros"
+        description="Cadastre ideias, propostas e projetos para análise técnica e busca de recursos."
+        icon={FolderKanban}
+        accent="violet"
+        context="Carteira de projetos"
+        action={
+          !mostrarFormulario && (
+            <a
+              href="/projetos-captacao/projetos?novo=1"
+              className="btn-primary w-full justify-center md:w-auto"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Novo projeto
+            </a>
+          )
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -385,40 +373,17 @@ export default async function ProjetosCaptacaoProjetosPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Total de projetos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {projetos.length}
-              </p>
-            </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard label="Total de projetos" value={projetos.length} icon={FolderKanban} accent="violet" />
+            <ModuleMetricCard label="Ideias" value={totalIdeias} icon={Lightbulb} accent="violet" />
+            <ModuleMetricCard label="Em análise" value={totalAnalise} icon={ClipboardCheck} accent="violet" />
+            <ModuleMetricCard label="Valor estimado total" value={formatarMoeda(valorTotal)} icon={Wallet} accent="violet" />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Ideias</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {totalIdeias}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Em análise</p>
-              <p className="mt-2 text-2xl font-bold text-blue-700">
-                {totalAnalise}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Valor estimado total</p>
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                {formatarMoeda(valorTotal)}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -507,7 +472,7 @@ export default async function ProjetosCaptacaoProjetosPage({
                           </h3>
 
                           <p className="mt-1 text-sm text-slate-600">
-                            {areaLabel(projeto.area)} • {projeto.tipo || 'Tipo não informado'}
+                            {areaLabel(projeto.area)}  {projeto.tipo || 'Tipo não informado'}
                           </p>
                         </div>
 
@@ -595,9 +560,7 @@ export default async function ProjetosCaptacaoProjetosPage({
                 Nenhum projeto encontrado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

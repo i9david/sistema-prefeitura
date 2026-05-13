@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 function limparNomeArquivo(nome: string) {
@@ -52,8 +52,6 @@ export async function salvarConfiguracaoSistema(formData: FormData) {
     redirect('/login')
   }
 
-  const supabaseAdmin = createAdminClient()
-
   const nomeSistema = String(formData.get('nome_sistema') ?? '').trim()
   const logo = formData.get('logo_prefeitura') as File | null
 
@@ -61,7 +59,7 @@ export async function salvarConfiguracaoSistema(formData: FormData) {
     redirect('/administrativo/configuracoes?message=Informe o nome do sistema')
   }
 
-  const { error: nomeError } = await supabaseAdmin
+  const { error: nomeError } = await supabase
     .from('administrativo_configuracoes')
     .upsert(
       {
@@ -71,7 +69,7 @@ export async function salvarConfiguracaoSistema(formData: FormData) {
         updated_at: new Date().toISOString(),
       },
       {
-        onConflict: 'chave',
+        onConflict: 'municipio_id,chave',
       }
     )
 
@@ -89,7 +87,7 @@ export async function salvarConfiguracaoSistema(formData: FormData) {
       redirect(`/administrativo/configuracoes?message=${encodeURIComponent(msg)}`)
     }
 
-    const { error: logoError } = await supabaseAdmin
+    const { error: logoError } = await supabase
       .from('administrativo_configuracoes')
       .upsert(
         {
@@ -99,7 +97,7 @@ export async function salvarConfiguracaoSistema(formData: FormData) {
           updated_at: new Date().toISOString(),
         },
         {
-          onConflict: 'chave',
+          onConflict: 'municipio_id,chave',
         }
       )
 

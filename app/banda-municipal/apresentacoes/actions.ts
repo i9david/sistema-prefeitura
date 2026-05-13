@@ -2,12 +2,8 @@
 
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 
 export async function criarApresentacao(formData: FormData) {
   const supabase = await createClient()
@@ -125,7 +121,7 @@ export async function salvarParticipantesApresentacao(formData: FormData) {
           observacoes: observacoes || null,
         },
         {
-          onConflict: 'apresentacao_id,musico_id',
+          onConflict: 'municipio_id,apresentacao_id,musico_id',
         }
       )
 

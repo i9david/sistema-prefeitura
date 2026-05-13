@@ -1,11 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
 import {
   atualizarVinculoProfessorAula,
@@ -86,8 +82,8 @@ export default async function AulaProfessoresPage({
         id,
         funcao,
         created_at,
-        aulas:aula_id ( id, nome ),
-        professores:professor_id ( id, nome )
+        aulas:aula_id!aula_professores_aula_id_fkey ( id, nome ),
+        professores:professor_id!aula_professores_professor_id_fkey ( id, nome )
       `)
       .order('created_at', { ascending: false }),
   ])
@@ -134,7 +130,7 @@ export default async function AulaProfessoresPage({
                   href="/aula-professores?novo=1"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700"
                 >
-                  ➕ Novo vínculo
+                  ? Novo vínculo
                 </a>
               )}
             </div>

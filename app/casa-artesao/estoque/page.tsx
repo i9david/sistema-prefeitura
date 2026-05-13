@@ -1,12 +1,14 @@
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+﻿import { redirect } from 'next/navigation'
+import { Boxes, PackageCheck, PackageX, Wallet } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCasaArtesaoNav } from '@/components/modulo-casa-artesao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
+import { cache } from 'react'
+
+export const revalidate = 300 // Revalidar cache a cada 5 minutos
 
 type Produto = {
   id: string
@@ -24,16 +26,76 @@ type Artesao = {
   nome: string
 }
 
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-}
-
 function formatarMoeda(valor: number | null | undefined) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(Number(valor ?? 0))
 }
+
+const carregarArtesaos = cache(async () => {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('casa_artesao_artesaos')
+    .select('id, nome')
+    .order('nome', { ascending: true })
+
+  if (error) throw error
+  return data || []
+})
+
+const carregarProdutosEstoque = cache(async (busca: string, statusFiltro: string, artesaoFiltro: string) => {
+  const supabase = await createClient()
+
+  let query = supabase
+    .from('casa_artesao_produtos')
+    .select('id, nome, descricao, preco, quantidade, artesao_id, status')
+    .order('nome', { ascending: true })
+    .limit(100)
+
+  if (busca) {
+    query = query.ilike('nome', `%${busca}%`)
+  }
+
+  if (statusFiltro) {
+    query = query.eq('status', statusFiltro)
+  }
+
+  if (artesaoFiltro) {
+    query = query.eq('artesao_id', artesaoFiltro)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return data || []
+})
+
+const calcularMetricasEstoque = cache(async () => {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('casa_artesao_produtos')
+    .select('quantidade, preco, status')
+
+  if (error) throw error
+
+  const produtos = data || []
+  const totalItens = produtos.reduce((acc, produto) => acc + Number(produto.quantidade ?? 0), 0)
+  const valorTotalEstoque = produtos.reduce(
+    (acc, produto) => acc + (Number(produto.quantidade ?? 0) * Number(produto.preco ?? 0)),
+    0
+  )
+  const produtosDisponiveis = produtos.filter(p => p.status === 'disponivel').length
+  const produtosIndisponiveis = produtos.filter(p => p.status === 'indisponivel').length
+
+  return {
+    totalItens,
+    valorTotalEstoque,
+    produtosDisponiveis,
+    produtosIndisponiveis
+  }
+})
 
 export default async function CasaArtesaoEstoquePage({
   searchParams,
@@ -58,103 +120,62 @@ export default async function CasaArtesaoEstoquePage({
 
   if (!user) redirect('/login')
 
-  let produtosQuery = supabase
-    .from('casa_artesao_produtos')
-    .select('*')
-    .order('nome', { ascending: true })
-
-  if (busca) {
-    produtosQuery = produtosQuery.ilike('nome', `%${busca}%`)
-  }
-
-  if (statusFiltro) {
-    produtosQuery = produtosQuery.eq('status', statusFiltro)
-  }
-
-  if (artesaoFiltro) {
-    produtosQuery = produtosQuery.eq('artesao_id', artesaoFiltro)
-  }
-
-  const [
-    { data: produtosData, error: produtosError },
-    { data: artesaosData, error: artesaosError },
-  ] = await Promise.all([
-    produtosQuery,
-    supabase
-      .from('casa_artesao_artesaos')
-      .select('id, nome')
-      .order('nome', { ascending: true }),
+  const [produtos, artesaos, metricas] = await Promise.all([
+    carregarProdutosEstoque(busca, statusFiltro, artesaoFiltro),
+    carregarArtesaos(),
+    calcularMetricasEstoque()
   ])
-
-  if (produtosError) {
-    redirect(`/casa-artesao/estoque?message=${encodeURIComponent(produtosError.message)}`)
-  }
-
-  if (artesaosError) {
-    redirect(`/casa-artesao/estoque?message=${encodeURIComponent(artesaosError.message)}`)
-  }
-
-  const produtos = (produtosData ?? []) as Produto[]
-  const artesaos = (artesaosData ?? []) as Artesao[]
 
   function getNomeArtesao(artesaoId: string) {
     return artesaos.find((artesao) => artesao.id === artesaoId)?.nome || 'Artesão'
   }
 
-  const totalItens = produtos.reduce((acc, produto) => acc + Number(produto.quantidade ?? 0), 0)
-  const valorTotalEstoque = produtos.reduce(
+  const totalValorEmEstoque = produtos.reduce(
     (acc, produto) => acc + Number(produto.preco ?? 0) * Number(produto.quantidade ?? 0),
     0
-  )
+  );
+
   const produtosComEstoque = produtos.filter((produto) => Number(produto.quantidade ?? 0) > 0).length
   const produtosSemEstoque = produtos.filter((produto) => Number(produto.quantidade ?? 0) <= 0).length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCasaArtesaoNav currentPath="/casa-artesao/estoque" />
+    <ModuleLayout sidebar={<ModuloCasaArtesaoNav currentPath="/casa-artesao/estoque" />}>
+      <ModuleHeader
+        title="Estoque"
+        description="Controle de produtos disponíveis, quantidades e valor total em estoque."
+        eyebrow="Operação"
+        icon={Boxes}
+        accent="amber"
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Estoque
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Controle de produtos disponíveis, quantidades e valor total em estoque.
-            </p>
-          </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard
+              label="Produtos listados"
+              value={produtos.length}
+              icon={Boxes}
+              accent="amber"
+            />
+            <ModuleMetricCard
+              label="Unidades em estoque"
+              value={metricas.totalItens}
+              icon={PackageCheck}
+              accent="emerald"
+            />
+            <ModuleMetricCard
+              label="Produtos sem estoque"
+              value={metricas.produtosIndisponiveis}
+              icon={PackageX}
+              accent="violet"
+            />
+            <ModuleMetricCard
+              label="Valor total em estoque"
+              value={formatarMoeda(metricas.valorTotalEstoque)}
+              icon={Wallet}
+              accent="blue"
+            />
+          </ModuleGrid>
 
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Produtos listados</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {produtos.length}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Unidades em estoque</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalItens}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Produtos com estoque</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {produtosComEstoque}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Valor total em estoque</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {formatarMoeda(valorTotalEstoque)}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <form method="get" className="grid gap-4 md:grid-cols-4">
               <input
                 type="text"
@@ -200,9 +221,9 @@ export default async function CasaArtesaoEstoquePage({
                 {params.message}
               </p>
             )}
-          </div>
+          </ModuleCard>
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -301,9 +322,7 @@ export default async function CasaArtesaoEstoquePage({
                 Nenhum produto encontrado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

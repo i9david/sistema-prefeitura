@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 
 type Modalidade = {
   id: string
@@ -32,7 +32,7 @@ function getDescricaoAula(aula: Aula, modalidades: Modalidade[]) {
   return `${aula.nome} • ${modalidadeNome} • ${aula.dia_semana} • ${aula.horario_inicio} às ${aula.horario_fim}`
 }
 
-export function FrequenciaFiltros({
+function FrequenciaFiltrosInner({
   modalidades,
   aulas,
   modalidadeIdSelecionada = '',
@@ -118,3 +118,5 @@ export function FrequenciaFiltros({
     </form>
   )
 }
+
+export const FrequenciaFiltros = memo(FrequenciaFiltrosInner)

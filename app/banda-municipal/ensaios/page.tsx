@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { Calendar, Plus } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { ModuloBandaMunicipalNav } from '@/components/modulo-banda-municipal-nav'
 import {
   criarEnsaio,
@@ -37,10 +35,6 @@ type Presenca = {
   musico_id: string
   status: string
   observacoes: string | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarData(data: string | null | undefined) {
@@ -158,35 +152,26 @@ export default async function BandaEnsaiosPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloBandaMunicipalNav currentPath="/banda-municipal/ensaios" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Ensaios
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Organização dos ensaios e frequência da banda.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/banda-municipal/ensaios?novo=1"
-                  className="inline-flex rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Novo ensaio
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloBandaMunicipalNav currentPath="/banda-municipal/ensaios" />}>
+      <ModuleHeader
+        title="Ensaios"
+        eyebrow="Operação"
+        description="Organização dos ensaios e frequência da banda."
+        icon={Calendar}
+        accent="violet"
+        context="Agenda musical"
+        action={
+          !mostrarFormulario ? (
+            <a href="/banda-municipal/ensaios?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <Plus size={16} aria-hidden="true" />
+              Novo ensaio
+            </a>
+          ) : null
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-slate-900">
                   {ensaioEditando ? 'Editar ensaio' : 'Novo ensaio'}
@@ -295,10 +280,10 @@ export default async function BandaEnsaiosPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -358,7 +343,7 @@ export default async function BandaEnsaiosPage({
                             {ensaio.titulo}
                           </h3>
                           <p className="text-sm text-slate-600">
-                            {formatarData(ensaio.data_ensaio)} • {ensaio.horario_inicio}
+                            {formatarData(ensaio.data_ensaio)}  {ensaio.horario_inicio}
                             {ensaio.horario_fim ? ` às ${ensaio.horario_fim}` : ''}
                           </p>
                           <p className="text-sm text-slate-600">
@@ -412,16 +397,16 @@ export default async function BandaEnsaiosPage({
                 Nenhum ensaio encontrado.
               </p>
             )}
-          </div>
+          </ModuleCard>
 
           {ensaioSelecionado && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="mb-5">
                 <h2 className="text-2xl font-bold text-slate-900">
                   Chamada do ensaio
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  {ensaioSelecionado.titulo} • {formatarData(ensaioSelecionado.data_ensaio)}
+                  {ensaioSelecionado.titulo}  {formatarData(ensaioSelecionado.data_ensaio)}
                 </p>
               </div>
 
@@ -489,10 +474,8 @@ export default async function BandaEnsaiosPage({
                   Nenhum músico ativo encontrado.
                 </p>
               )}
-            </div>
+            </ModuleCard>
           )}
-        </section>
-      </div>
-    </main>
+    </ModuleLayout>
   )
 }

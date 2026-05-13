@@ -1,0 +1,10 @@
+{
+  "files.encoding": "utf8",
+  "files.autoGuessEncoding": false,
+  "chat.tools.terminal.autoApprove": {
+    "/^node -e \"const fs=require\\('fs'\\);const lines=fs\\.readFileSync\\('app/casa-artesao/produtos/page\\.tsx','utf8'\\)\\.split\\(/\\\\r\\?\\\\n/\\);for\\(let i=260;i<430;i\\+\\+\\)\\{console\\.log\\(\\(i\\+1\\)\\.toString\\(\\)\\.padStart\\(4,' '\\)\\+' \\| '\\+lines\\[i\\]\\);\\}\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}

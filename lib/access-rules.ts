@@ -20,8 +20,10 @@ export const ACCESS_RULES: AccessRule[] = [
   { pathPrefix: '/alunos', modulo: 'Centro Cultural', area: 'Alunos', action: 'visualizar' },
   { pathPrefix: '/aulas', modulo: 'Centro Cultural', area: 'Aulas', action: 'visualizar' },
   { pathPrefix: '/professores', modulo: 'Centro Cultural', area: 'Professores', action: 'visualizar' },
+  { pathPrefix: '/agenda-cultural', modulo: 'Centro Cultural', area: 'Aulas', action: 'visualizar' },
   { pathPrefix: '/frequencia', modulo: 'Centro Cultural', area: 'Frequência', action: 'visualizar' },
   { pathPrefix: '/visitantes', modulo: 'Centro Cultural', area: 'Visitantes', action: 'visualizar' },
+  { pathPrefix: '/centro-cultural/dashboard', modulo: 'Centro Cultural', area: 'Alunos', action: 'visualizar' },
   { pathPrefix: '/centro-cultural/relatorios', modulo: 'Centro Cultural', area: 'Alunos', action: 'visualizar' },
 
   { pathPrefix: '/biblioteca/leitores', modulo: 'Biblioteca', area: 'Leitores', action: 'visualizar' },
@@ -32,17 +34,28 @@ export const ACCESS_RULES: AccessRule[] = [
   { pathPrefix: '/casa-artesao/artesaos', modulo: 'Casa do Artesão', area: 'Artesãos', action: 'visualizar' },
   { pathPrefix: '/casa-artesao/produtos', modulo: 'Casa do Artesão', area: 'Produtos', action: 'visualizar' },
   { pathPrefix: '/casa-artesao/estoque', modulo: 'Casa do Artesão', area: 'Estoque', action: 'visualizar' },
-  { pathPrefix: '/casa-artesao/relatorios', modulo: 'Casa do Artesão', area: 'Artesãos', action: 'visualizar' },
+  { pathPrefix: '/casa-artesao/caixa', modulo: 'Casa do Artesão', area: 'Caixa', action: 'visualizar' },
+  { pathPrefix: '/casa-artesao/fechamentos', modulo: 'Casa do Artesão', area: 'Fechamentos', action: 'visualizar' },
+  { pathPrefix: '/casa-artesao/configuracoes', modulo: 'Casa do Artesão', area: 'Caixa', action: 'visualizar' },
+  { pathPrefix: '/casa-artesao/relatorios', modulo: 'Casa do Artesão', area: 'Relatórios', action: 'visualizar' },
+  { pathPrefix: '/casa-artesao', modulo: 'Casa do Artesão', area: 'Produtos', action: 'visualizar' },
 
   { pathPrefix: '/banda-municipal/musicos', modulo: 'Banda Municipal', area: 'Músicos', action: 'visualizar' },
   { pathPrefix: '/banda-municipal/instrumentos', modulo: 'Banda Municipal', area: 'Instrumentos', action: 'visualizar' },
   { pathPrefix: '/banda-municipal/ensaios', modulo: 'Banda Municipal', area: 'Ensaios', action: 'visualizar' },
   { pathPrefix: '/banda-municipal/apresentacoes', modulo: 'Banda Municipal', area: 'Apresentações', action: 'visualizar' },
-  { pathPrefix: '/banda-municipal/relatorios', modulo: 'Banda Municipal', area: 'Músicos', action: 'visualizar' },
+  { pathPrefix: '/banda-municipal/presencas', modulo: 'Banda Municipal', area: 'Presenças', action: 'visualizar' },
+  { pathPrefix: '/banda-municipal/relatorios', modulo: 'Banda Municipal', area: 'Relatórios', action: 'visualizar' },
 
   { pathPrefix: '/administrativo/agenda', modulo: 'Administrativo', area: 'Agenda Institucional', action: 'visualizar' },
   { pathPrefix: '/administrativo/usuarios', modulo: 'Administrativo', area: 'Usuários e Acessos', action: 'visualizar' },
   { pathPrefix: '/relatorios', modulo: 'Administrativo', area: 'Relatórios Gerais', action: 'visualizar' },
+
+  { pathPrefix: '/almoxarifado/categorias', modulo: 'Almoxarifado', area: 'Categorias', action: 'visualizar' },
+  { pathPrefix: '/almoxarifado/produtos', modulo: 'Almoxarifado', area: 'Produtos', action: 'visualizar' },
+  { pathPrefix: '/almoxarifado/relatorios', modulo: 'Almoxarifado', area: 'Relatórios', action: 'visualizar' },
+  { pathPrefix: '/almoxarifado/movimentacoes', modulo: 'Almoxarifado', area: 'Movimentações', action: 'visualizar' },
+  { pathPrefix: '/almoxarifado', modulo: 'Almoxarifado', area: 'Produtos', action: 'visualizar' },
 ]
 
 export function getAccessRuleForPath(pathname: string): AccessRule | null {

@@ -1,96 +1,255 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import {
+  BarChart3,
+  CalendarRange,
+  ClipboardCheck,
+  FileBarChart,
+  Percent,
+  UserRoundPlus,
+  Users,
+} from 'lucide-react'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
+import { ModuleEmptyState } from '@/components/module/module-state'
+import { ModuleTable } from '@/components/module/module-table'
+import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
+import { getRelatoriosGestaoPublica } from '@/lib/relatorios-gestao-publica'
+import { exigirPermissaoPagina } from '@/lib/seguranca-paginas'
 
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
+function formatarData(data: string) {
+  const [ano, mes, dia] = data.split('-')
+  return `${dia}/${mes}/${ano}`
 }
 
-export default async function CentroCulturalRelatoriosPage() {
-  const supabase = await createClient()
+function formatarPercentual(valor: number) {
+  return `${valor.toLocaleString('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`
+}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export default async function CentroCulturalRelatoriosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    data_inicio?: string
+    data_fim?: string
+  }>
+}) {
+  await exigirPermissaoPagina('Centro Cultural', 'Alunos', 'visualizar')
 
-  if (!user) redirect('/login')
+  const params = await searchParams
 
-  const hoje = new Date().toISOString().split('T')[0]
+  let relatorio
 
-  const [
-    { count: totalAlunos },
-    { count: totalProfessores },
-    { count: totalVisitantes },
-    { count: totalFrequenciasHoje },
-    { count: totalFrequencias },
-  ] = await Promise.all([
-    supabase.from('alunos').select('*', { count: 'exact', head: true }),
-    supabase.from('professores').select('*', { count: 'exact', head: true }),
-    supabase.from('visitantes').select('*', { count: 'exact', head: true }),
-    supabase.from('frequencias').select('*', { count: 'exact', head: true }).eq('data_aula', hoje),
-    supabase.from('frequencias').select('*', { count: 'exact', head: true }),
-  ])
+  try {
+    relatorio = await getRelatoriosGestaoPublica({
+      dataInicio: params.data_inicio,
+      dataFim: params.data_fim,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Erro ao carregar relatórios'
+    redirect(`/centro-cultural?message=${encodeURIComponent(message)}`)
+  }
+
+  const periodo = `${formatarData(relatorio.periodo.dataInicio)} a ${formatarData(
+    relatorio.periodo.dataFim
+  )}`
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <<Sidebar currentPath="/" /> />
+    <ModuleLayout sidebar={<ModuloCentroCulturalNav currentPath="/centro-cultural/relatorios" />}>
+      <ModuleHeader
+        title="Relatórios de gestão pública"
+        eyebrow="Relatórios"
+        description="Consolidados profissionais de frequência, alunos e visitantes para prestação de contas e gestão institucional."
+        icon={FileBarChart}
+        context={periodo}
+        accent="blue"
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Relatórios do Centro Cultural
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Indicadores exclusivos do módulo Centro Cultural
-                </p>
-              </div>
+      <ModuleCard>
+        <form method="get" className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-600">
+              Início
+            </span>
+            <input
+              type="date"
+              name="data_inicio"
+              defaultValue={relatorio.periodo.dataInicio}
+            />
+          </label>
 
-              <Link
-                href="/centro-cultural"
-                className="inline-flex rounded-2xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Voltar ao módulo
-              </Link>
-            </div>
-          </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-600">
+              Fim
+            </span>
+            <input
+              type="date"
+              name="data_fim"
+              defaultValue={relatorio.periodo.dataFim}
+            />
+          </label>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Alunos</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{totalAlunos ?? 0}</p>
-            </div>
+          <button type="submit" className="btn-primary">
+            <CalendarRange size={16} aria-hidden="true" />
+            Atualizar
+          </button>
+        </form>
+      </ModuleCard>
 
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Professores</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{totalProfessores ?? 0}</p>
-            </div>
+      <ModuleGrid columns={4}>
+        <ModuleMetricCard
+          label="Alunos ativos"
+          value={relatorio.indicadores.alunosAtivos}
+          icon={Users}
+          accent="blue"
+        />
+        <ModuleMetricCard
+          label="Frequência média"
+          value={formatarPercentual(relatorio.indicadores.frequenciaMedia)}
+          icon={Percent}
+          accent="emerald"
+        />
+        <ModuleMetricCard
+          label="Visitantes"
+          value={relatorio.indicadores.totalVisitas}
+          icon={UserRoundPlus}
+          accent="violet"
+        />
+        <ModuleMetricCard
+          label="Recorrência"
+          value={formatarPercentual(relatorio.indicadores.taxaRecorrencia)}
+          icon={BarChart3}
+          accent="amber"
+        />
+      </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Visitantes</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{totalVisitantes ?? 0}</p>
-            </div>
+      <ModuleGrid columns={4}>
+        <ModuleMetricCard
+          label="Lançamentos"
+          value={relatorio.indicadores.totalFrequencias}
+          icon={ClipboardCheck}
+          accent="blue"
+        />
+        <ModuleMetricCard
+          label="Presenças"
+          value={relatorio.indicadores.presencas}
+          icon={ClipboardCheck}
+          accent="emerald"
+        />
+        <ModuleMetricCard
+          label="Faltas"
+          value={relatorio.indicadores.faltas}
+          icon={ClipboardCheck}
+          accent="amber"
+        />
+        <ModuleMetricCard
+          label="Visitantes únicos"
+          value={relatorio.indicadores.visitantesUnicos}
+          icon={UserRoundPlus}
+          accent="violet"
+        />
+      </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Frequências hoje</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{totalFrequenciasHoje ?? 0}</p>
-            </div>
+      <ModuleCard>
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-slate-950">
+            Alunos e frequência por modalidade
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Baseado em matrículas ativas e lançamentos de frequência do período.
+          </p>
+        </div>
 
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Frequências totais</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{totalFrequencias ?? 0}</p>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
+        {relatorio.modalidades.length > 0 ? (
+          <ModuleTable
+            data={relatorio.modalidades}
+            getRowKey={(linha) => linha.modalidadeId}
+            columns={[
+              {
+                header: 'Modalidade',
+                render: (linha) => (
+                  <span className="font-medium text-slate-950">{linha.modalidade}</span>
+                ),
+              },
+              { header: 'Alunos ativos', render: (linha) => linha.alunosAtivos },
+              { header: 'Lançamentos', render: (linha) => linha.lancamentos },
+              { header: 'Presenças', render: (linha) => linha.presencas },
+              { header: 'Faltas', render: (linha) => linha.faltas },
+              {
+                header: 'Freq. média',
+                render: (linha) => formatarPercentual(linha.frequenciaMedia),
+              },
+            ]}
+          />
+        ) : (
+          <ModuleEmptyState title="Nenhuma modalidade encontrada para o período." />
+        )}
+      </ModuleCard>
+
+      <ModuleCard>
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-slate-950">Visitantes por destino</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Baseado no CRM cultural quando disponível, com fallback para registros legados.
+          </p>
+        </div>
+
+        {relatorio.visitantesPorDestino.length > 0 ? (
+          <ModuleTable
+            data={relatorio.visitantesPorDestino}
+            getRowKey={(linha) => linha.destino}
+            columns={[
+              {
+                header: 'Destino',
+                render: (linha) => (
+                  <span className="font-medium text-slate-950">{linha.destino}</span>
+                ),
+              },
+              { header: 'Visitas', render: (linha) => linha.totalVisitas },
+              { header: 'Visitantes únicos', render: (linha) => linha.visitantesUnicos },
+              { header: 'Recorrentes', render: (linha) => linha.visitantesRecorrentes },
+              { header: 'Taxa', render: (linha) => formatarPercentual(linha.taxaRecorrencia) },
+            ]}
+          />
+        ) : (
+          <ModuleEmptyState title="Nenhum visitante encontrado para o período." />
+        )}
+      </ModuleCard>
+
+      <ModuleCard>
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-slate-950">Série diária</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Leitura diária para prestação de contas e acompanhamento operacional.
+          </p>
+        </div>
+
+        {relatorio.serieDiaria.length > 0 ? (
+          <ModuleTable
+            data={relatorio.serieDiaria}
+            getRowKey={(linha) => linha.data}
+            columns={[
+              {
+                header: 'Data',
+                render: (linha) => (
+                  <span className="font-medium text-slate-950">
+                    {formatarData(linha.data)}
+                  </span>
+                ),
+              },
+              { header: 'Frequências', render: (linha) => linha.frequenciasLancadas },
+              { header: 'Presenças', render: (linha) => linha.presencas },
+              { header: 'Visitantes', render: (linha) => linha.visitantes },
+            ]}
+          />
+        ) : (
+          <ModuleEmptyState title="Nenhuma movimentação encontrada para o período." />
+        )}
+      </ModuleCard>
+    </ModuleLayout>
   )
 }

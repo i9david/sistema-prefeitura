@@ -1,11 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 import { ModuloMuseuNav } from '@/components/modulo-museu-nav'
 import {
   criarMovimentacaoMuseu,
@@ -145,7 +141,7 @@ export default async function MuseuMovimentacoesPage({
       nova_localizacao,
       novo_status_operacional,
       created_at,
-      acervo:museu_acervo (
+      acervo:museu_acervo!museu_movimentacoes_acervo_id_fkey (
         id,
         nome,
         numero_tombo
@@ -262,7 +258,7 @@ export default async function MuseuMovimentacoesPage({
                     .filter((peca) => peca.status !== 'inativo')
                     .map((peca) => (
                       <option key={peca.id} value={peca.id}>
-                        {peca.nome} {peca.numero_tombo ? `• ${peca.numero_tombo}` : ''}
+                        {peca.nome} {peca.numero_tombo ? ` ${peca.numero_tombo}` : ''}
                       </option>
                     ))}
                 </select>

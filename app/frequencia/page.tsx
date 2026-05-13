@@ -1,14 +1,10 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
 import { exigirPermissaoPagina } from '@/lib/seguranca-paginas'
 import { salvarFrequencia } from './actions'
+
+export const revalidate = 300 // Revalidar cache a cada 5 minutos
 
 type Professor = {
   id: string
@@ -34,8 +30,11 @@ type Modalidade = {
 type Aluno = {
   id: string
   nome: string
-  aula_id: string
   status: string
+}
+
+type MatriculaAluno = {
+  alunos: Aluno | Aluno[] | null
 }
 
 type Frequencia = {
@@ -64,7 +63,7 @@ export default async function FrequenciaPage({
     data_aula?: string
   }>
 }) {
-  await exigirPermissaoPagina('Centro Cultural', 'Frequência', 'visualizar')
+  await exigirPermissaoPagina('Centro Cultural', 'Frequï¿½ncia', 'visualizar')
 
   const params = await searchParams
   const aulaIdSelecionada = params.aula_id?.trim() || ''
@@ -129,10 +128,57 @@ export default async function FrequenciaPage({
     ? aulasPermitidas.find((aula) => aula.id === aulaIdSelecionada)
     : null
 
-  const { data: alunosData, error: erroAlunos } = aulaSelecionada
+  const { data: matriculasData, error: erroMatriculas } = aulaSelecionada
+    ? await supabase
+        .from('aluno_matriculas')
+        .select(`
+          alunos:aluno_id!aluno_matriculas_aluno_id_fkey (
+            id,
+            nome,
+            status
+          )
+        `)
+        .eq('aula_id', aulaSelecionada.id)
+        .eq('status', 'ativo')
+        .lte('data_inicio', dataAulaSelecionada)
+        .or(`data_fim.is.null,data_fim.gte.${dataAulaSelecionada}`)
+        .order('data_inicio', { ascending: true })
+    : { data: [], error: null as any }
+
+  if (erroMatriculas) {
+    redirect(`/frequencia?message=${encodeURIComponent(erroMatriculas.message)}`)
+  }
+
+  let alunos = ((matriculasData ?? []) as MatriculaAluno[])
+    .map((matricula) => {
+      if (!matricula.alunos) return null
+      if (Array.isArray(matricula.alunos)) return matricula.alunos[0] ?? null
+      return matricula.alunos
+    })
+    .filter((aluno): aluno is Aluno => Boolean(aluno && aluno.status === 'ativo'))
+
+  const { data: matriculasAtivasDaTurma, error: erroMatriculasAtivasDaTurma } =
+    aulaSelecionada && alunos.length === 0
+      ? await supabase
+          .from('aluno_matriculas')
+          .select('id')
+          .eq('aula_id', aulaSelecionada.id)
+          .eq('status', 'ativo')
+          .limit(1)
+      : { data: [], error: null as any }
+
+  if (erroMatriculasAtivasDaTurma) {
+    redirect(`/frequencia?message=${encodeURIComponent(erroMatriculasAtivasDaTurma.message)}`)
+  }
+
+  const usarFallbackLegado =
+    aulaSelecionada && alunos.length === 0 && (matriculasAtivasDaTurma ?? []).length === 0
+
+  const { data: alunosCompatData, error: erroAlunos } =
+    usarFallbackLegado
     ? await supabase
         .from('alunos')
-        .select('id, nome, aula_id, status')
+        .select('id, nome, status')
         .eq('aula_id', aulaSelecionada.id)
         .eq('status', 'ativo')
         .order('nome', { ascending: true })
@@ -142,7 +188,9 @@ export default async function FrequenciaPage({
     redirect(`/frequencia?message=${encodeURIComponent(erroAlunos.message)}`)
   }
 
-  const alunos = (alunosData ?? []) as Aluno[]
+  if (alunos.length === 0) {
+    alunos = (alunosCompatData ?? []) as Aluno[]
+  }
 
   const { data: frequenciasData, error: erroFrequencias } = aulaSelecionada
     ? await supabase
@@ -164,7 +212,7 @@ export default async function FrequenciaPage({
 
   function getDescricaoAula(aula: Aula) {
     const modalidadeNome = getModalidadeNome(aula.modalidade_id)
-    return `${aula.nome} • ${modalidadeNome} • ${aula.dia_semana} • ${aula.horario_inicio} às ${aula.horario_fim}`
+    return `${aula.nome} ï¿½ ${modalidadeNome} ï¿½ ${aula.dia_semana} ï¿½ ${aula.horario_inicio} ï¿½s ${aula.horario_fim}`
   }
 
   function getStatusAluno(alunoId: string) {
@@ -183,7 +231,7 @@ export default async function FrequenciaPage({
         <section className="space-y-6">
           <div className={cardClassName()}>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Frequência por turma
+              Frequï¿½ncia por turma
             </h1>
             <p className="mt-2 text-sm text-slate-600">
               {professor
@@ -266,8 +314,8 @@ export default async function FrequenciaPage({
                       <thead>
                         <tr className="border-b bg-slate-50">
                           <th className="px-4 py-3 text-left">Aluno</th>
-                          <th className="px-4 py-3 text-left">Presença</th>
-                          <th className="px-4 py-3 text-left">Observação</th>
+                          <th className="px-4 py-3 text-left">Presenï¿½a</th>
+                          <th className="px-4 py-3 text-left">Observaï¿½ï¿½o</th>
                         </tr>
                       </thead>
 
@@ -297,7 +345,7 @@ export default async function FrequenciaPage({
                               <input
                                 name={`observacoes_${aluno.id}`}
                                 defaultValue={getObservacaoAluno(aluno.id)}
-                                placeholder="Observação"
+                                placeholder="Observaï¿½ï¿½o"
                                 className="w-full rounded-xl border px-3 py-2"
                               />
                             </td>
@@ -312,7 +360,7 @@ export default async function FrequenciaPage({
                       type="submit"
                       className="rounded-2xl bg-green-600 px-6 py-3 text-white"
                     >
-                      Salvar frequência
+                      Salvar frequï¿½ncia
                     </button>
                   </div>
                 </form>

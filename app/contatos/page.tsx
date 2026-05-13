@@ -1,21 +1,40 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
+
+export const revalidate = 300 // Revalidar cache a cada 5 minutos
+
+type Relacao<T> = T | T[] | null
+
+type Modalidade = {
+  id: string
+  nome: string
+}
+
+type Aula = {
+  id: string
+  nome: string
+  dia_semana: string | null
+  horario_inicio: string | null
+  horario_fim: string | null
+  modalidades: Relacao<Modalidade>
+}
+
+type Matricula = {
+  id: string
+  status: string
+  data_inicio: string | null
+  data_fim: string | null
+  aulas: Relacao<Aula>
+}
 
 type Aluno = {
   id: string
   nome: string
   telefone: string
   data_nascimento: string | null
-  aula_nome: string | null
-  modalidade: string | null
   status: string
+  aluno_matriculas: Matricula[] | null
 }
 
 type Visitante = {
@@ -75,6 +94,45 @@ function sectionTitleClassName() {
   return 'text-2xl font-bold tracking-tight text-slate-900'
 }
 
+function normalizarRelacao<T>(relacao: Relacao<T>) {
+  if (Array.isArray(relacao)) return relacao[0] ?? null
+  return relacao ?? null
+}
+
+function getMatriculasAtivas(aluno: Aluno, dataReferencia: string) {
+  return (aluno.aluno_matriculas ?? []).filter((matricula) => {
+    if (matricula.status !== 'ativo') return false
+    if (matricula.data_inicio && matricula.data_inicio > dataReferencia) return false
+    if (matricula.data_fim && matricula.data_fim < dataReferencia) return false
+    return Boolean(normalizarRelacao(matricula.aulas))
+  })
+}
+
+function getAula(matricula: Matricula) {
+  return normalizarRelacao(matricula.aulas)
+}
+
+function getModalidade(aula: Aula | null) {
+  return normalizarRelacao(aula?.modalidades ?? null)
+}
+
+function getTurmasAluno(aluno: Aluno, dataReferencia: string) {
+  return getMatriculasAtivas(aluno, dataReferencia)
+    .map((matricula) => getAula(matricula)?.nome)
+    .filter(Boolean) as string[]
+}
+
+function getModalidadesAluno(aluno: Aluno, dataReferencia: string) {
+  return getMatriculasAtivas(aluno, dataReferencia)
+    .map((matricula) => getModalidade(getAula(matricula))?.nome)
+    .filter(Boolean) as string[]
+}
+
+function formatarListaUnica(valores: string[]) {
+  const lista = Array.from(new Set(valores)).sort()
+  return lista.length > 0 ? lista.join(', ') : '-'
+}
+
 export default async function ContatosPage({
   searchParams,
 }: {
@@ -97,6 +155,7 @@ export default async function ContatosPage({
   if (!user) redirect('/login')
 
   const hoje = new Date()
+  const dataAtual = hoje.toISOString().slice(0, 10)
   const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0')
   const diaAtual = String(hoje.getDate()).padStart(2, '0')
 
@@ -104,7 +163,30 @@ export default async function ContatosPage({
     await Promise.all([
       supabase
         .from('alunos')
-        .select('id, nome, telefone, data_nascimento, aula_nome, modalidade, status')
+        .select(`
+          id,
+          nome,
+          telefone,
+          data_nascimento,
+          status,
+          aluno_matriculas (
+            id,
+            status,
+            data_inicio,
+            data_fim,
+            aulas:aula_id!aluno_matriculas_aula_id_fkey (
+              id,
+              nome,
+              dia_semana,
+              horario_inicio,
+              horario_fim,
+              modalidades!aulas_modalidade_id_fkey (
+                id,
+                nome
+              )
+            )
+          )
+        `)
         .eq('status', 'ativo')
         .order('nome', { ascending: true }),
 
@@ -126,8 +208,8 @@ export default async function ContatosPage({
   let visitantes = (visitantesData ?? []) as Visitante[]
 
   const turmas = Array.from(
-    new Set(alunos.map((item) => item.aula_nome).filter(Boolean))
-  ).sort() as string[]
+    new Set(alunos.flatMap((item) => getTurmasAluno(item, dataAtual)))
+  ).sort()
 
   if (busca) {
     alunos = alunos.filter((item) => item.nome.toLowerCase().includes(busca))
@@ -135,7 +217,7 @@ export default async function ContatosPage({
   }
 
   if (turmaSelecionada) {
-    alunos = alunos.filter((item) => item.aula_nome === turmaSelecionada)
+    alunos = alunos.filter((item) => getTurmasAluno(item, dataAtual).includes(turmaSelecionada))
   }
 
   const aniversariantesMesAlunos = alunos.filter((aluno) => extrairMesDia(aluno.data_nascimento).mes === mesAtual)
@@ -289,7 +371,9 @@ export default async function ContatosPage({
                     <div key={aluno.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="font-semibold text-slate-900">{aluno.nome}</p>
                       <p className="text-sm text-slate-600">{formatarTelefone(aluno.telefone)}</p>
-                      <p className="text-sm text-slate-500">{aluno.aula_nome || aluno.modalidade || '-'}</p>
+                      <p className="text-sm text-slate-500">
+                        {formatarListaUnica(getTurmasAluno(aluno, dataAtual))}
+                      </p>
                       <div className="mt-3">
                         <a
                           href={gerarLinkWhatsApp(aluno.telefone, `Olá, ${aluno.nome}! ${mensagemAniversario}`)}
@@ -361,7 +445,9 @@ export default async function ContatosPage({
                         <td className="rounded-l-2xl px-4 py-4 font-medium text-slate-900">{aluno.nome}</td>
                         <td className="px-4 py-4 text-slate-700">{formatarTelefone(aluno.telefone)}</td>
                         <td className="px-4 py-4 text-slate-700">{aluno.data_nascimento || '-'}</td>
-                        <td className="px-4 py-4 text-slate-700">{aluno.aula_nome || aluno.modalidade || '-'}</td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {formatarListaUnica(getTurmasAluno(aluno, dataAtual))}
+                        </td>
                         <td className="rounded-r-2xl px-4 py-4">
                           <a
                             href={gerarLinkWhatsApp(aluno.telefone, `Olá, ${aluno.nome}! ${mensagemAniversario}`)}
@@ -405,8 +491,12 @@ export default async function ContatosPage({
                       <tr key={aluno.id} className="bg-slate-50">
                         <td className="rounded-l-2xl px-4 py-4 font-medium text-slate-900">{aluno.nome}</td>
                         <td className="px-4 py-4 text-slate-700">{formatarTelefone(aluno.telefone)}</td>
-                        <td className="px-4 py-4 text-slate-700">{aluno.modalidade || '-'}</td>
-                        <td className="px-4 py-4 text-slate-700">{aluno.aula_nome || '-'}</td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {formatarListaUnica(getModalidadesAluno(aluno, dataAtual))}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {formatarListaUnica(getTurmasAluno(aluno, dataAtual))}
+                        </td>
                         <td className="px-4 py-4 text-slate-700">{aluno.data_nascimento || '-'}</td>
                         <td className="rounded-r-2xl px-4 py-4">
                           <div className="flex flex-wrap gap-2">

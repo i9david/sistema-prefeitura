@@ -1,10 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 import { getContextoPermissoes } from '@/lib/get-permissoes'
 import { podeAcessar } from '@/lib/permissoes'
 
@@ -32,11 +26,7 @@ export async function exigirPermissaoPagina(
   )
 
   if (!permitido) {
-    redirect(
-      `/dashboard?message=${encodeURIComponent(
-        'Você não tem permissão para acessar esta página'
-      )}`
-    )
+    redirect('/sem-permissao')
   }
 
   return contexto

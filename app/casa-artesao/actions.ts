@@ -1,12 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from "@/components/sidebar"
 
 function hojeBrasil() {
@@ -25,18 +21,18 @@ export async function registrarVenda(formData: FormData) {
   const quantidade = Number(formData.get('quantidade') ?? 1)
 
   if (!produtoId || quantidade <= 0) {
-    redirect('/casa-artesao?message=Dados inválidos')
+    redirect('/casa-artesao?message=Dados invï¿½lidos')
   }
 
   // Buscar produto
   const { data: produto } = await supabase
     .from('casa_artesao_produtos')
-    .select('*')
+    .select('id, nome, quantidade, preco, status, artesao_id')
     .eq('id', produtoId)
     .single()
 
   if (!produto) {
-    redirect('/casa-artesao?message=Produto não encontrado')
+    redirect('/casa-artesao?message=Produto nï¿½o encontrado')
   }
 
   if (produto.quantidade < quantidade) {

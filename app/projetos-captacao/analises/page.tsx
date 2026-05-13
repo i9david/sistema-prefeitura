@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { ClipboardCheck, FileCheck2, FileWarning, Plus, SearchCheck } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCaptacaoNav } from '@/components/modulo-captacao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { atualizarAnalise, criarAnalise } from './actions'
 
 type Projeto = {
@@ -34,12 +33,6 @@ type Analise = {
   responsavel_analise: string | null
   status: string | null
   created_at: string | null
-  projetos: { id: string; nome: string; area: string | null } | null
-  oportunidades: { id: string; titulo: string; orgao: string | null } | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarData(data: string | null | undefined) {
@@ -135,17 +128,7 @@ export default async function AnalisesCaptacaoPage({
       proximo_passo,
       responsavel_analise,
       status,
-      created_at,
-      projetos:captacao_projetos (
-        id,
-        nome,
-        area
-      ),
-      oportunidades:captacao_oportunidades (
-        id,
-        titulo,
-        orgao
-      )
+      created_at
     `)
     .order('created_at', { ascending: false })
 
@@ -165,7 +148,21 @@ export default async function AnalisesCaptacaoPage({
 
   const projetos = (projetosData ?? []) as Projeto[]
   const oportunidades = (oportunidadesData ?? []) as Oportunidade[]
-  const analises = (analisesData ?? []) as Analise[]
+  const analises = (analisesData ?? []) as unknown as Analise[]
+  const projetosPorId = new Map(projetos.map((projeto) => [projeto.id, projeto]))
+  const oportunidadesPorId = new Map(
+    oportunidades.map((oportunidade) => [oportunidade.id, oportunidade])
+  )
+
+  function getProjeto(analise: Analise) {
+    if (!analise.projeto_id) return null
+    return projetosPorId.get(analise.projeto_id) ?? null
+  }
+
+  function getOportunidade(analise: Analise) {
+    if (!analise.oportunidade_id) return null
+    return oportunidadesPorId.get(analise.oportunidade_id) ?? null
+  }
 
   const analiseEditando = editarId
     ? analises.find((item) => item.id === editarId)
@@ -179,35 +176,26 @@ export default async function AnalisesCaptacaoPage({
   const totalInviaveis = analises.filter((item) => item.viabilidade === 'inviavel').length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCaptacaoNav currentPath="/projetos-captacao/analises" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Análise Técnica
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Avaliação técnica dos projetos, pendências, viabilidade, pareceres e próximos passos.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/projetos-captacao/analises?novo=1"
-                  className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Nova análise
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloCaptacaoNav currentPath="/projetos-captacao/analises" />}>
+      <ModuleHeader
+        title="Análise Técnica"
+        eyebrow="Operação"
+        description="Avaliação técnica dos projetos, pendências, viabilidade, pareceres e próximos passos."
+        icon={ClipboardCheck}
+        accent="violet"
+        context="Pareceres e viabilidade"
+        action={
+          !mostrarFormulario && (
+            <a href="/projetos-captacao/analises?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <Plus size={16} aria-hidden="true" />
+              Nova análise
+            </a>
+          )
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -340,32 +328,17 @@ export default async function AnalisesCaptacaoPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Total de análises</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">{analises.length}</p>
-            </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard label="Total de análises" value={analises.length} icon={ClipboardCheck} accent="violet" />
+            <ModuleMetricCard label="Em análise" value={totalEmAnalise} icon={SearchCheck} accent="violet" />
+            <ModuleMetricCard label="Viáveis" value={totalViaveis} icon={FileCheck2} accent="violet" />
+            <ModuleMetricCard label="Precisam ajustar" value={totalAjustar} icon={FileWarning} accent="violet" />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Em análise</p>
-              <p className="mt-2 text-2xl font-bold text-blue-700">{totalEmAnalise}</p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Viáveis</p>
-              <p className="mt-2 text-2xl font-bold text-green-700">{totalViaveis}</p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Precisam ajustar</p>
-              <p className="mt-2 text-2xl font-bold text-amber-700">{totalAjustar}</p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -419,19 +392,23 @@ export default async function AnalisesCaptacaoPage({
 
             {analises.length > 0 ? (
               <div className="mt-6 space-y-4">
-                {analises.map((analise) => (
-                  <div
-                    key={analise.id}
-                    className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                  >
+                {analises.map((analise) => {
+                  const projeto = getProjeto(analise)
+                  const oportunidade = getOportunidade(analise)
+
+                  return (
+                    <div
+                      key={analise.id}
+                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                    >
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="space-y-3">
                         <div>
                           <h3 className="text-xl font-bold text-slate-900">
-                            {analise.projetos?.nome || 'Projeto não informado'}
+                            {projeto?.nome || 'Projeto não informado'}
                           </h3>
                           <p className="mt-1 text-sm text-slate-600">
-                            Oportunidade: {analise.oportunidades?.titulo || 'Sem oportunidade vinculada'}
+                            Oportunidade: {oportunidade?.titulo || 'Sem oportunidade vinculada'}
                           </p>
                         </div>
 
@@ -490,16 +467,15 @@ export default async function AnalisesCaptacaoPage({
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="mt-4 text-sm text-slate-600">
                 Nenhuma análise encontrada.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

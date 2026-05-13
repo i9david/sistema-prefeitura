@@ -1,15 +1,10 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
 
 type Visitante = {
   id: string
+  pessoa_id: string | null
   nome: string
   telefone: string | null
   data_visita: string | null
@@ -21,8 +16,34 @@ type Visitante = {
   observacoes: string | null
 }
 
+type Relacao<T> = T | T[] | null
+
+type PessoaRelacionada = {
+  nome: string
+  telefone: string | null
+}
+
+type VisitaCrm = {
+  id: string
+  pessoa_id: string
+  destino: string | null
+  motivo: string | null
+  data_visita: string | null
+  horario_entrada: string | null
+  horario_saida: string | null
+  status: string | null
+  observacoes: string | null
+  pessoas: Relacao<PessoaRelacionada>
+}
+
 function cardClassName() {
   return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
+}
+
+function normalizarRelacao<T>(relacao: Relacao<T>) {
+  if (!relacao) return null
+  if (Array.isArray(relacao)) return relacao[0] ?? null
+  return relacao
 }
 
 function formatarData(data: string | null | undefined) {
@@ -129,26 +150,70 @@ export default async function VisitantesRelatoriosPage({
 
   if (!user) redirect('/login')
 
-  const { data, error } = await supabase
-    .from('visitantes')
+  const { data: visitasCrmData, error: visitasCrmError } = await supabase
+    .from('visitante_visitas')
     .select(`
       id,
-      nome,
-      telefone,
+      pessoa_id,
+      destino,
+      motivo,
       data_visita,
       horario_entrada,
       horario_saida,
       status,
-      destino,
-      motivo,
-      observacoes
+      observacoes,
+      pessoas:pessoa_id!visitante_visitas_pessoa_id_fkey (
+        nome,
+        telefone
+      )
     `)
     .gte('data_visita', dataInicio)
     .lte('data_visita', dataFim)
     .order('data_visita', { ascending: false })
     .order('horario_entrada', { ascending: false })
 
-  const visitantes = ((data ?? []) as Visitante[])
+  const { data, error } =
+    visitasCrmError
+      ? await supabase
+          .from('visitantes')
+          .select(`
+            id,
+            pessoa_id,
+            nome,
+            telefone,
+            data_visita,
+            horario_entrada,
+            horario_saida,
+            status,
+            destino,
+            motivo,
+            observacoes
+          `)
+          .gte('data_visita', dataInicio)
+          .lte('data_visita', dataFim)
+          .order('data_visita', { ascending: false })
+          .order('horario_entrada', { ascending: false })
+      : { data: [], error: null }
+
+  const visitantes = visitasCrmError
+    ? ((data ?? []) as Visitante[])
+    : ((visitasCrmData ?? []) as unknown as VisitaCrm[]).map((visita) => {
+        const pessoa = normalizarRelacao(visita.pessoas)
+
+        return {
+          id: visita.id,
+          pessoa_id: visita.pessoa_id,
+          nome: pessoa?.nome ?? 'Pessoa sem nome',
+          telefone: pessoa?.telefone ?? null,
+          data_visita: visita.data_visita,
+          horario_entrada: visita.horario_entrada,
+          horario_saida: visita.horario_saida,
+          status: visita.status,
+          destino: visita.destino,
+          motivo: visita.motivo,
+          observacoes: visita.observacoes,
+        }
+      })
 
   const visitantesHoje = visitantes.filter(
     (item) => item.data_visita === hoje
@@ -185,6 +250,33 @@ export default async function VisitantesRelatoriosPage({
   const encerradosMuseu = visitantesMuseu.filter(
     (item) => item.status === 'inativo'
   ).length
+
+  const recorrenciaPorPessoa = visitantes.reduce<
+    Record<string, { nome: string; telefone: string | null; total: number }>
+  >((acc, item) => {
+    const chave = item.pessoa_id ?? `${item.nome}-${item.telefone ?? ''}`
+    const atual = acc[chave] ?? {
+      nome: item.nome,
+      telefone: item.telefone,
+      total: 0,
+    }
+
+    atual.total += 1
+    acc[chave] = atual
+    return acc
+  }, {})
+
+  const visitantesUnicos = Object.keys(recorrenciaPorPessoa).length
+  const visitantesRecorrentes = Object.values(recorrenciaPorPessoa).filter(
+    (item) => item.total > 1
+  )
+  const taxaRecorrencia =
+    visitantesUnicos > 0
+      ? Math.round((visitantesRecorrentes.length / visitantesUnicos) * 1000) / 10
+      : 0
+  const rankingRecorrencia = visitantesRecorrentes
+    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
+    .slice(0, 5)
 
   const agrupadoPorDia = visitantes.reduce<Record<string, Visitante[]>>((acc, item) => {
     const chave = item.data_visita || 'Sem data'
@@ -316,6 +408,69 @@ export default async function VisitantesRelatoriosPage({
             </div>
           </div>
 
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className={cardClassName()}>
+              <p className="text-sm font-medium text-slate-500">Visitantes únicos</p>
+              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                {visitantesUnicos}
+              </p>
+            </div>
+
+            <div className={cardClassName()}>
+              <p className="text-sm font-medium text-slate-500">Visitantes recorrentes</p>
+              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                {visitantesRecorrentes.length}
+              </p>
+            </div>
+
+            <div className={cardClassName()}>
+              <p className="text-sm font-medium text-slate-500">Taxa de recorrência</p>
+              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                {taxaRecorrencia.toLocaleString('pt-BR')}%
+              </p>
+            </div>
+          </div>
+
+          <div className={cardClassName()}>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+              Visitantes recorrentes
+            </h2>
+
+            {rankingRecorrencia.length > 0 ? (
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full border-separate border-spacing-y-2 text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Pessoa</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Telefone</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Visitas no mês</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {rankingRecorrencia.map((item) => (
+                      <tr key={`${item.nome}-${item.telefone ?? ''}`} className="bg-slate-50">
+                        <td className="rounded-l-2xl px-4 py-4 font-medium text-slate-900">
+                          {item.nome}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {formatarTelefone(item.telefone)}
+                        </td>
+                        <td className="rounded-r-2xl px-4 py-4 text-slate-700">
+                          {item.total}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-slate-600">
+                Nenhum visitante recorrente encontrado no mês selecionado.
+              </p>
+            )}
+          </div>
+
           <div className={cardClassName()}>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Consolidado por dia
@@ -339,7 +494,7 @@ export default async function VisitantesRelatoriosPage({
                             {formatarData(dia)}
                           </h3>
                           <p className="mt-1 text-sm text-slate-600">
-                            Centro Cultural: {totalCentro} • Museu: {totalMuseu}
+                            Centro Cultural: {totalCentro}  Museu: {totalMuseu}
                           </p>
                         </div>
                       </div>

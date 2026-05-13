@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { Music, Plus } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { ModuloBandaMunicipalNav } from '@/components/modulo-banda-municipal-nav'
 import {
   criarInstrumento,
@@ -32,10 +30,6 @@ type Instrumento = {
   data_aquisicao: string | null
   observacoes: string | null
   created_at: string
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarData(data: string | null | undefined) {
@@ -149,35 +143,26 @@ export default async function BandaInstrumentosPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloBandaMunicipalNav currentPath="/banda-municipal/instrumentos" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Instrumentos
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Controle patrimonial e operacional dos instrumentos.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/banda-municipal/instrumentos?novo=1"
-                  className="inline-flex rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Novo instrumento
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloBandaMunicipalNav currentPath="/banda-municipal/instrumentos" />}>
+      <ModuleHeader
+        title="Instrumentos"
+        eyebrow="Cadastros"
+        description="Controle patrimonial e operacional dos instrumentos."
+        icon={Music}
+        accent="violet"
+        context="Patrimônio musical"
+        action={
+          !mostrarFormulario ? (
+            <a href="/banda-municipal/instrumentos?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <Plus size={16} aria-hidden="true" />
+              Novo instrumento
+            </a>
+          ) : null
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-slate-900">
                   {instrumentoEditando ? 'Editar instrumento' : 'Novo instrumento'}
@@ -325,10 +310,10 @@ export default async function BandaInstrumentosPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -451,9 +436,7 @@ export default async function BandaInstrumentosPage({
                 Nenhum instrumento encontrado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

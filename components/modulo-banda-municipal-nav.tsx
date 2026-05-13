@@ -1,4 +1,5 @@
-import { ModuloNav } from '@/components/modulo-nav'
+import { ModuleSidebar } from '@/components/module/module-sidebar'
+import { getModuleConfig } from '@/config/modules'
 
 type ModuloBandaMunicipalNavProps = {
   currentPath?: string
@@ -7,19 +8,15 @@ type ModuloBandaMunicipalNavProps = {
 export function ModuloBandaMunicipalNav({
   currentPath = '',
 }: ModuloBandaMunicipalNavProps) {
+  const config = getModuleConfig('banda-municipal')
+
   return (
-    <ModuloNav
-      titulo="Banda Municipal"
+    <ModuleSidebar
+      title={config.title}
       currentPath={currentPath}
-      cor="roxo"
-      itens={[
-        { label: 'Visão do módulo', href: '/banda-municipal' },
-        { label: 'Músicos', href: '/banda-municipal/musicos' },
-        { label: 'Instrumentos', href: '/banda-municipal/instrumentos' },
-        { label: 'Ensaios', href: '/banda-municipal/ensaios' },
-        { label: 'Apresentações', href: '/banda-municipal/apresentacoes' },
-        { label: 'Relatórios', href: '/banda-municipal/relatorios' },
-      ]}
+      groups={config.groups}
+      accent={config.accent}
+      context="Operação musical"
     />
   )
 }

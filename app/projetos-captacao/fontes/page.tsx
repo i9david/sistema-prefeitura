@@ -1,13 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { ExternalLink } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { Building2, ExternalLink, Globe2, Landmark, Plus, ShieldCheck } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCaptacaoNav } from '@/components/modulo-captacao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import {
   ativarFonteRecurso,
   atualizarFonteRecurso,
@@ -25,10 +23,6 @@ type Fonte = {
   descricao: string | null
   status: string | null
   created_at: string | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function statusClassName(status: string | null | undefined) {
@@ -114,35 +108,26 @@ export default async function FontesRecursosPage({
   const totalEstaduais = fontes.filter((item) => item.esfera === 'Estadual').length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCaptacaoNav currentPath="/projetos-captacao/fontes" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Fontes de Recursos
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Cadastre e organize órgãos, programas, portais oficiais e linhas de financiamento para projetos culturais e turísticos.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/projetos-captacao/fontes?novo=1"
-                  className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Nova fonte
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloCaptacaoNav currentPath="/projetos-captacao/fontes" />}>
+      <ModuleHeader
+        title="Fontes de Recursos"
+        eyebrow="Cadastros"
+        description="Cadastre e organize órgãos, programas, portais oficiais e linhas de financiamento para projetos culturais e turísticos."
+        icon={Landmark}
+        accent="violet"
+        context="Base de captação"
+        action={
+          !mostrarFormulario && (
+            <a href="/projetos-captacao/fontes?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <Plus size={16} aria-hidden="true" />
+              Nova fonte
+            </a>
+          )
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -258,40 +243,17 @@ export default async function FontesRecursosPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Total de fontes</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {fontes.length}
-              </p>
-            </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard label="Total de fontes" value={fontes.length} icon={Landmark} accent="violet" />
+            <ModuleMetricCard label="Fontes ativas" value={totalAtivas} icon={ShieldCheck} accent="violet" />
+            <ModuleMetricCard label="Federais" value={totalFederais} icon={Globe2} accent="violet" />
+            <ModuleMetricCard label="Estaduais" value={totalEstaduais} icon={Building2} accent="violet" />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Fontes ativas</p>
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                {totalAtivas}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Federais</p>
-              <p className="mt-2 text-2xl font-bold text-blue-700">
-                {totalFederais}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Estaduais</p>
-              <p className="mt-2 text-2xl font-bold text-violet-700">
-                {totalEstaduais}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -379,7 +341,7 @@ export default async function FontesRecursosPage({
                           </h3>
 
                           <p className="mt-1 text-sm text-slate-600">
-                            {fonte.orgao || 'Órgão não informado'} • {fonte.esfera || '-'} • {fonte.area || '-'}
+                            {fonte.orgao || 'Órgão não informado'}  {fonte.esfera || '-'}  {fonte.area || '-'}
                           </p>
                         </div>
 
@@ -461,9 +423,7 @@ export default async function FontesRecursosPage({
                 Nenhuma fonte encontrada.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

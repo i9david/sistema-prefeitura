@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 
 export type PermissaoModulo = {
   pode_visualizar: boolean
@@ -81,7 +81,7 @@ export function podeAcessar(
 
   const permissao = permissoes.find((item) => {
     if (recurso) {
-      return item.modulo === modulo && item.recurso === recurso
+      return item.modulo === modulo && (item.recurso === recurso || item.area === recurso)
     }
 
     return item.modulo === modulo

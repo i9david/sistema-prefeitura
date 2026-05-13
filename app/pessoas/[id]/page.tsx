@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar" { Sidebar } from "@/components/sidebar" currentPath="/" /> } from '@/components/<Sidebar currentPath="/" />'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { Sidebar } from '@/components/sidebar'
 import { atualizarPessoaCRM } from '../actions'
 
 type Pessoa = {
@@ -16,12 +16,32 @@ type Aluno = {
   id: string
   pessoa_id: string | null
   nome: string
-  aula_nome: string | null
-  modalidade: string | null
-  dia_aula: string | null
-  horario_turma: string | null
   status: string
-  data_matricula: string | null
+  aluno_matriculas: Matricula[] | null
+}
+
+type Relacao<T> = T | T[] | null
+
+type Modalidade = {
+  id: string
+  nome: string
+}
+
+type Aula = {
+  id: string
+  nome: string
+  dia_semana: string | null
+  horario_inicio: string | null
+  horario_fim: string | null
+  modalidades: Relacao<Modalidade>
+}
+
+type Matricula = {
+  id: string
+  status: string
+  data_inicio: string | null
+  data_fim: string | null
+  aulas: Relacao<Aula>
 }
 
 type Frequencia = {
@@ -108,6 +128,36 @@ function normalizarDataOrdenacao(data: string) {
   return new Date(`${data}T12:00:00`).getTime()
 }
 
+function normalizarRelacao<T>(relacao: Relacao<T>) {
+  if (Array.isArray(relacao)) return relacao[0] ?? null
+  return relacao ?? null
+}
+
+function getAula(matricula: Matricula) {
+  return normalizarRelacao(matricula.aulas)
+}
+
+function getModalidade(aula: Aula | null) {
+  return normalizarRelacao(aula?.modalidades ?? null)
+}
+
+function formatarHorario(aula: Aula | null) {
+  if (!aula?.horario_inicio || !aula?.horario_fim) return '-'
+  return `${aula.horario_inicio.slice(0, 5)} às ${aula.horario_fim.slice(0, 5)}`
+}
+
+function getMatriculasAluno(aluno: Aluno) {
+  return aluno.aluno_matriculas ?? []
+}
+
+function formatarDescricaoMatricula(matricula: Matricula) {
+  const aula = getAula(matricula)
+  const modalidade = getModalidade(aula)
+  const turma = aula?.nome ?? 'Turma não informada'
+  const nomeModalidade = modalidade?.nome ?? 'Modalidade não informada'
+  return `${turma} • ${nomeModalidade} • ${matricula.status}`
+}
+
 export default async function PessoaPerfilPage({
   params,
   searchParams,
@@ -142,7 +192,29 @@ export default async function PessoaPerfilPage({
 
   const { data: alunosData, error: erroAlunos } = await supabase
     .from('alunos')
-    .select('id, pessoa_id, nome, aula_nome, modalidade, dia_aula, horario_turma, status, data_matricula')
+    .select(`
+      id,
+      pessoa_id,
+      nome,
+      status,
+      aluno_matriculas (
+        id,
+        status,
+        data_inicio,
+        data_fim,
+        aulas:aula_id!aluno_matriculas_aula_id_fkey (
+          id,
+          nome,
+          dia_semana,
+          horario_inicio,
+          horario_fim,
+          modalidades!aulas_modalidade_id_fkey (
+            id,
+            nome
+          )
+        )
+      )
+    `)
     .eq('pessoa_id', pessoa.id)
 
   if (erroAlunos) {
@@ -222,17 +294,19 @@ export default async function PessoaPerfilPage({
   })
 
   alunos.forEach((aluno) => {
-    if (aluno.data_matricula) {
+    getMatriculasAluno(aluno).forEach((matricula) => {
+      if (!matricula.data_inicio) return
+
       timeline.push({
-        id: `matricula-${aluno.id}`,
-        data: aluno.data_matricula,
+        id: `matricula-${matricula.id}`,
+        data: matricula.data_inicio,
         origem: 'centro-cultural',
         titulo: 'Entrada no Centro Cultural',
-        descricao: `${aluno.aula_nome || 'Turma não informada'} • ${aluno.modalidade || 'Modalidade não informada'} • ${aluno.status}`,
+        descricao: formatarDescricaoMatricula(matricula),
         badge: 'Centro Cultural',
         badgeClass: 'bg-blue-100 text-blue-700',
       })
-    }
+    })
   })
 
   frequencias.forEach((freq) => {
@@ -302,7 +376,7 @@ export default async function PessoaPerfilPage({
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <<Sidebar currentPath="/" /> />
+        <Sidebar currentPath="/" />
 
         <section className="space-y-6">
           <div className={cardClassName()}>
@@ -534,23 +608,77 @@ export default async function PessoaPerfilPage({
               <div className="mt-6 space-y-4">
                 {alunos.map((aluno) => (
                   <div key={aluno.id} className="rounded-2xl bg-slate-50 p-5">
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                      <div>
-                        <p className="text-sm text-slate-500">Turma</p>
-                        <p className="mt-1 font-semibold text-slate-900">{aluno.aula_nome || '-'}</p>
+                    {getMatriculasAluno(aluno).length > 0 ? (
+                      <div className="space-y-4">
+                        {getMatriculasAluno(aluno).map((matricula) => {
+                          const aula = getAula(matricula)
+                          const modalidade = getModalidade(aula)
+
+                          return (
+                            <div
+                              key={matricula.id}
+                              className="rounded-2xl border border-slate-200 bg-white p-4"
+                            >
+                              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                                <div>
+                                  <p className="text-sm text-slate-500">Turma</p>
+                                  <p className="mt-1 font-semibold text-slate-900">
+                                    {aula?.nome || '-'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">Modalidade</p>
+                                  <p className="mt-1 font-semibold text-slate-900">
+                                    {modalidade?.nome || '-'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">Dia</p>
+                                  <p className="mt-1 font-semibold text-slate-900">
+                                    {aula?.dia_semana || '-'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">Horário</p>
+                                  <p className="mt-1 font-semibold text-slate-900">
+                                    {formatarHorario(aula)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">Status</p>
+                                  <p className="mt-1">
+                                    <span
+                                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                                        matricula.status === 'ativo'
+                                          ? 'bg-green-100 text-green-700'
+                                          : 'bg-red-100 text-red-700'
+                                      }`}
+                                    >
+                                      {matricula.status}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                <div>
+                                  <p className="text-sm text-slate-500">Início da matrícula</p>
+                                  <p className="mt-1 font-semibold text-slate-900">
+                                    {formatarData(matricula.data_inicio)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-slate-500">Fim da matrícula</p>
+                                  <p className="mt-1 font-semibold text-slate-900">
+                                    {formatarData(matricula.data_fim)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Modalidade</p>
-                        <p className="mt-1 font-semibold text-slate-900">{aluno.modalidade || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Dia</p>
-                        <p className="mt-1 font-semibold text-slate-900">{aluno.dia_aula || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Horário</p>
-                        <p className="mt-1 font-semibold text-slate-900">{aluno.horario_turma || '-'}</p>
-                      </div>
+                    ) : (
                       <div>
                         <p className="text-sm text-slate-500">Status</p>
                         <p className="mt-1">
@@ -564,15 +692,11 @@ export default async function PessoaPerfilPage({
                             {aluno.status}
                           </span>
                         </p>
+                        <p className="mt-3 text-sm text-slate-600">
+                          Aluno vinculado sem matrícula registrada.
+                        </p>
                       </div>
-                    </div>
-
-                    <div className="mt-4">
-                      <p className="text-sm text-slate-500">Matrícula</p>
-                      <p className="mt-1 font-semibold text-slate-900">
-                        {formatarData(aluno.data_matricula)}
-                      </p>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

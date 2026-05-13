@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { AlertTriangle, CheckCircle2, ClipboardList, Clock, Plus } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { ModuloTurismoNav } from '@/components/modulo-turismo-nav'
 import {
   atualizarDemandaTurismo,
@@ -20,11 +19,6 @@ type PontoTuristico = {
   status: string | null
 }
 
-type PontoRelacionado =
-  | { id: string; nome: string }
-  | { id: string; nome: string }[]
-  | null
-
 type Demanda = {
   id: string
   ponto_id: string | null
@@ -35,17 +29,6 @@ type Demanda = {
   responsavel: string | null
   prazo: string | null
   created_at: string | null
-  pontos: PontoRelacionado
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-}
-
-function getPontoNome(ponto: PontoRelacionado) {
-  if (!ponto) return 'Sem ponto vinculado'
-  if (Array.isArray(ponto)) return ponto[0]?.nome ?? 'Sem ponto vinculado'
-  return ponto.nome
 }
 
 function formatarData(data: string | null | undefined) {
@@ -137,11 +120,7 @@ export default async function TurismoDemandasPage({
       status,
       responsavel,
       prazo,
-      created_at,
-      pontos:turismo_pontos (
-        id,
-        nome
-      )
+      created_at
     `)
     .order('created_at', { ascending: false })
 
@@ -171,6 +150,12 @@ export default async function TurismoDemandasPage({
 
   const pontos = (pontosData ?? []) as PontoTuristico[]
   const demandas = (demandasData ?? []) as Demanda[]
+  const nomesPontos = new Map(pontos.map((ponto) => [ponto.id, ponto.nome]))
+
+  function getPontoNome(pontoId: string | null) {
+    if (!pontoId) return 'Sem ponto vinculado'
+    return nomesPontos.get(pontoId) ?? 'Ponto não encontrado'
+  }
 
   const demandaEditando = editarId
     ? demandas.find((demanda) => demanda.id === editarId)
@@ -184,35 +169,28 @@ export default async function TurismoDemandasPage({
   const totalUrgentes = demandas.filter((item) => item.prioridade === 'urgente').length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloTurismoNav currentPath="/turismo/demandas" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Demandas do Turismo
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Controle de melhorias, sinalização, limpeza, acesso, infraestrutura e ações ligadas aos pontos turísticos.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/turismo/demandas?novo=1"
-                  className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                >
-                  Nova demanda
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloTurismoNav currentPath="/turismo/demandas" />}>
+      <ModuleHeader
+        title="Demandas do Turismo"
+        description="Controle de melhorias, sinalização, limpeza, acesso, infraestrutura e ações ligadas aos pontos turísticos."
+        eyebrow="Operação"
+        icon={ClipboardList}
+        accent="emerald"
+        action={
+          !mostrarFormulario && (
+            <a
+              href="/turismo/demandas?novo=1"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Nova demanda
+            </a>
+          )
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -331,40 +309,17 @@ export default async function TurismoDemandasPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Pendentes</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {totalPendentes}
-              </p>
-            </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard label="Pendentes" value={totalPendentes} icon={ClipboardList} accent="amber" />
+            <ModuleMetricCard label="Em andamento" value={totalAndamento} icon={Clock} accent="blue" />
+            <ModuleMetricCard label="Concluídas" value={totalConcluidas} icon={CheckCircle2} accent="emerald" />
+            <ModuleMetricCard label="Urgentes" value={totalUrgentes} icon={AlertTriangle} accent="violet" />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Em andamento</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {totalAndamento}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Concluídas</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {totalConcluidas}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Urgentes</p>
-              <p className="mt-2 text-2xl font-bold text-red-700">
-                {totalUrgentes}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -449,7 +404,7 @@ export default async function TurismoDemandasPage({
                             {demanda.titulo}
                           </h3>
                           <p className="text-sm text-slate-600">
-                            Ponto turístico: {getPontoNome(demanda.pontos)}
+                            Ponto turístico: {getPontoNome(demanda.ponto_id)}
                           </p>
                         </div>
 
@@ -526,9 +481,7 @@ export default async function TurismoDemandasPage({
                 Nenhuma demanda encontrada.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

@@ -1,12 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 
 type RegistroSimples = {
   created_at?: string | null
@@ -164,7 +159,7 @@ export default async function BITemporalPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <<Sidebar currentPath="/" /> />
+        <Sidebar currentPath="/" />
 
         <section className="space-y-6">
           <div className={cardClassName()}>

@@ -1,13 +1,15 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
 import { exigirPermissaoPagina } from '@/lib/seguranca-paginas'
+import { PageEmptyState, PageFilters, PageList, PageShell } from '@/components/page-shell'
+import {
+  FormActions,
+  FormField,
+  FormMessage,
+  SelectInput,
+  TextInput,
+} from '@/components/form'
 import {
   ativarProfessor,
   atualizarProfessor,
@@ -39,11 +41,18 @@ type Professor = {
 type AulaProfessor = {
   id: string
   nome: string
-  professor_id: string | null
   dia_semana: string
   horario_inicio: string
   horario_fim: string
   status: string
+}
+
+type AulaRelacionada = AulaProfessor | AulaProfessor[] | null
+
+type VinculoAulaProfessor = {
+  id: string
+  professor_id: string
+  aulas: AulaRelacionada
 }
 
 type UsuarioSistema = {
@@ -58,6 +67,12 @@ function getModalidadeNome(modalidades: ModalidadeRelacionada) {
   if (!modalidades) return 'Modalidade'
   if (Array.isArray(modalidades)) return modalidades[0]?.nome ?? 'Modalidade'
   return modalidades.nome
+}
+
+function getAulaRelacionada(aulas: AulaRelacionada) {
+  if (!aulas) return null
+  if (Array.isArray(aulas)) return aulas[0] ?? null
+  return aulas
 }
 
 function formatarTelefone(valor: string | null | undefined) {
@@ -77,7 +92,7 @@ function formatarTelefone(valor: string | null | undefined) {
 }
 
 function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
+  return 'ui-card p-5'
 }
 
 export default async function ProfessoresPage({
@@ -130,7 +145,7 @@ export default async function ProfessoresPage({
       id,
       professor_id,
       funcao,
-      modalidades:modalidade_id ( id, nome )
+      modalidades!modalidade_professores_modalidade_id_fkey ( id, nome )
     `)
 
   if (erroVinculos) {
@@ -148,9 +163,20 @@ export default async function ProfessoresPage({
   }
 
   const { data: aulasData, error: erroAulas } = await supabase
-    .from('aulas')
-    .select('id, nome, professor_id, dia_semana, horario_inicio, horario_fim, status')
-    .order('nome', { ascending: true })
+    .from('aula_professores')
+    .select(`
+      id,
+      professor_id,
+      aulas:aula_id!aula_professores_aula_id_fkey (
+        id,
+        nome,
+        dia_semana,
+        horario_inicio,
+        horario_fim,
+        status
+      )
+    `)
+    .order('professor_id', { ascending: true })
 
   if (erroAulas) {
     redirect(`/professores?message=${encodeURIComponent(erroAulas.message)}`)
@@ -165,7 +191,7 @@ export default async function ProfessoresPage({
   }
 
   const vinculos = (vinculosData ?? []) as VinculoProfessor[]
-  const aulas = (aulasData ?? []) as AulaProfessor[]
+  const aulas = (aulasData ?? []) as VinculoAulaProfessor[]
   const usuariosSistema = (usuariosData ?? []) as UsuarioSistema[]
   const modalidades = modalidadesData ?? []
 
@@ -213,7 +239,11 @@ export default async function ProfessoresPage({
   }
 
   function turmasDoProfessor(professorId: string) {
-    return aulas.filter((aula) => aula.professor_id === professorId)
+    return aulas
+      .filter((vinculo) => vinculo.professor_id === professorId)
+      .map((vinculo) => getAulaRelacionada(vinculo.aulas))
+      .filter((aula): aula is AulaProfessor => Boolean(aula))
+      .sort((aulaAtual, proximaAula) => aulaAtual.nome.localeCompare(proximaAula.nome))
   }
 
   function usuarioDoProfessor(professorId: string) {
@@ -221,32 +251,16 @@ export default async function ProfessoresPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCentroCulturalNav currentPath="/professores" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Professores
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Cadastre, vincule modalidades e acompanhe as turmas dos professores do Centro Cultural
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/professores?novo=1"
-                  className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                >
-                  Novo professor
-                </a>
-              )}
-            </div>
-          </div>
+    <PageShell
+      nav={<ModuloCentroCulturalNav currentPath="/professores" />}
+      title="Professores"
+      subtitle="Cadastre, vincule modalidades e acompanhe as turmas dos professores do Centro Cultural."
+      primaryAction={
+        !mostrarFormulario
+          ? { label: 'Novo professor', href: '/professores?novo=1' }
+          : null
+      }
+    >
 
           {mostrarFormulario && (
             <div className={cardClassName()}>
@@ -257,7 +271,7 @@ export default async function ProfessoresPage({
 
                 <a
                   href="/professores"
-                  className="rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="btn-secondary"
                 >
                   Voltar para lista
                 </a>
@@ -271,29 +285,32 @@ export default async function ProfessoresPage({
                   <input type="hidden" name="id" value={professorEditando.id} />
                 )}
 
-                <input
-                  name="nome"
-                  placeholder="Nome do professor"
-                  required
-                  defaultValue={professorEditando?.nome ?? ''}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
+                <FormField label="Nome do professor">
+                  <TextInput
+                    name="nome"
+                    placeholder="Nome completo"
+                    required
+                    defaultValue={professorEditando?.nome ?? ''}
+                  />
+                </FormField>
 
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="E-mail do login do professor"
-                  required
-                  defaultValue={professorEditando?.email ?? ''}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
+                <FormField label="E-mail de login">
+                  <TextInput
+                    name="email"
+                    type="email"
+                    placeholder="professor@email.com"
+                    required
+                    defaultValue={professorEditando?.email ?? ''}
+                  />
+                </FormField>
 
-                <input
-                  name="telefone"
-                  placeholder="Telefone"
-                  defaultValue={professorEditando?.telefone ?? ''}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
+                <FormField label="Telefone">
+                  <TextInput
+                    name="telefone"
+                    placeholder="(64) 99999-9999"
+                    defaultValue={professorEditando?.telefone ?? ''}
+                  />
+                </FormField>
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -326,65 +343,50 @@ export default async function ProfessoresPage({
                   </div>
                 </div>
 
-                <select
-                  name="status"
-                  required
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  defaultValue={professorEditando?.status ?? 'ativo'}
-                >
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </select>
+                <FormField label="Status">
+                  <SelectInput
+                    name="status"
+                    required
+                    defaultValue={professorEditando?.status ?? 'ativo'}
+                  >
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                  </SelectInput>
+                </FormField>
 
-                {params.message && (
-                  <p className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                    {params.message}
-                  </p>
-                )}
+                <FormMessage>{params.message}</FormMessage>
 
-                <div className="flex gap-3">
+                <FormActions>
                   <button
                     type="submit"
-                    className="rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    className="btn-primary"
                   >
                     {professorEditando ? 'Atualizar professor' : 'Salvar professor'}
                   </button>
 
                   <a
                     href="/professores"
-                    className="rounded-2xl border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="btn-secondary"
                   >
                     Cancelar
                   </a>
-                </div>
+                </FormActions>
               </form>
             </div>
           )}
 
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                  Lista de professores
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Busque, filtre, edite, ative e inative registros
-                </p>
-              </div>
-
+          <PageFilters>
               <form method="get" className="grid w-full max-w-4xl gap-2 md:grid-cols-4">
-                <input
+                <TextInput
                   type="text"
                   name="busca"
                   placeholder="Buscar por nome"
                   defaultValue={busca}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
 
-                <select
+                <SelectInput
                   name="modalidade"
                   defaultValue={modalidadeFiltro}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
                 >
                   <option value="">Todas as modalidades</option>
                   {modalidades.map((modalidade) => (
@@ -392,35 +394,43 @@ export default async function ProfessoresPage({
                       {modalidade.nome}
                     </option>
                   ))}
-                </select>
+                </SelectInput>
 
-                <select
+                <SelectInput
                   name="status"
                   defaultValue={statusFiltro}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
                 >
                   <option value="">Todos os status</option>
                   <option value="ativo">Ativo</option>
                   <option value="inativo">Inativo</option>
-                </select>
+                </SelectInput>
 
                 <button
                   type="submit"
-                  className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  className="btn-primary"
                 >
                   Buscar
                 </button>
               </form>
-            </div>
 
             {params.message && !mostrarFormulario && (
-              <p className="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                {params.message}
-              </p>
+              <div className="mt-4">
+                <FormMessage>{params.message}</FormMessage>
+              </div>
             )}
+          </PageFilters>
 
+          <PageList
+            title="Lista de professores"
+            subtitle="Busque, filtre, edite, ative e inative registros."
+            meta={
+              <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
+                Registros: {professoresFiltrados.length}
+              </div>
+            }
+          >
             {professoresFiltrados.length > 0 ? (
-              <div className="mt-6 space-y-4">
+              <div className="space-y-4">
                 {professoresFiltrados.map((professor) => {
                   const modalidadesProfessor = modalidadesDoProfessor(professor.id)
                   const turmasProfessor = turmasDoProfessor(professor.id)
@@ -505,7 +515,7 @@ export default async function ProfessoresPage({
                                     <span className="font-semibold text-slate-900">
                                       {turma.nome}
                                     </span>{' '}
-                                    • {turma.dia_semana} • {turma.horario_inicio} às {turma.horario_fim}
+                                     {turma.dia_semana}  {turma.horario_inicio} às {turma.horario_fim}
                                   </div>
                                 ))}
                               </div>
@@ -522,7 +532,7 @@ export default async function ProfessoresPage({
                                 Usuário do sistema
                               </p>
                               <p className="text-sm text-slate-600">
-                                {usuarioVinculado.nome} • {usuarioVinculado.email}
+                                {usuarioVinculado.nome}  {usuarioVinculado.email}
                               </p>
                             </div>
                           )}
@@ -541,7 +551,7 @@ export default async function ProfessoresPage({
                                 ? `&status=${encodeURIComponent(statusFiltro)}`
                                 : ''
                             }`}
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            className="btn-secondary py-2"
                           >
                             Editar
                           </a>
@@ -551,7 +561,7 @@ export default async function ProfessoresPage({
                               <input type="hidden" name="id" value={professor.id} />
                               <button
                                 type="submit"
-                                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                                className="btn-danger py-2"
                               >
                                 Inativar
                               </button>
@@ -574,13 +584,11 @@ export default async function ProfessoresPage({
                 })}
               </div>
             ) : (
-              <p className="mt-4 text-sm text-slate-600">
+              <PageEmptyState>
                 Nenhum professor encontrado.
-              </p>
+              </PageEmptyState>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </PageList>
+    </PageShell>
   )
 }

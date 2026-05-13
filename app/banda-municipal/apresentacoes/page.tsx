@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { Mic, Plus } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { ModuloBandaMunicipalNav } from '@/components/modulo-banda-municipal-nav'
 import {
   criarApresentacao,
@@ -37,10 +35,6 @@ type Participacao = {
   musico_id: string
   confirmado: boolean
   observacoes: string | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarData(data: string | null | undefined) {
@@ -157,35 +151,26 @@ export default async function BandaApresentacoesPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloBandaMunicipalNav currentPath="/banda-municipal/apresentacoes" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Apresentações
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Agenda e histórico de apresentações da Banda Municipal.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/banda-municipal/apresentacoes?novo=1"
-                  className="inline-flex rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Nova apresentação
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloBandaMunicipalNav currentPath="/banda-municipal/apresentacoes" />}>
+      <ModuleHeader
+        title="Apresentações"
+        eyebrow="Operação"
+        description="Agenda e histórico de apresentações da Banda Municipal."
+        icon={Mic}
+        accent="violet"
+        context="Compromissos públicos"
+        action={
+          !mostrarFormulario ? (
+            <a href="/banda-municipal/apresentacoes?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <Plus size={16} aria-hidden="true" />
+              Nova apresentação
+            </a>
+          ) : null
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-slate-900">
                   {apresentacaoEditando ? 'Editar apresentação' : 'Nova apresentação'}
@@ -295,10 +280,10 @@ export default async function BandaApresentacoesPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -359,7 +344,7 @@ export default async function BandaApresentacoesPage({
                           </h3>
                           <p className="text-sm text-slate-600">
                             {formatarData(item.data_apresentacao)}
-                            {item.horario ? ` • ${item.horario}` : ''}
+                            {item.horario ? `  ${item.horario}` : ''}
                           </p>
                           <p className="text-sm text-slate-600">
                             Local: {item.local || '-'}
@@ -415,16 +400,16 @@ export default async function BandaApresentacoesPage({
                 Nenhuma apresentação encontrada.
               </p>
             )}
-          </div>
+          </ModuleCard>
 
           {apresentacaoSelecionada && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="mb-5">
                 <h2 className="text-2xl font-bold text-slate-900">
                   Participantes da apresentação
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  {apresentacaoSelecionada.titulo} • {formatarData(apresentacaoSelecionada.data_apresentacao)}
+                  {apresentacaoSelecionada.titulo}  {formatarData(apresentacaoSelecionada.data_apresentacao)}
                 </p>
               </div>
 
@@ -490,10 +475,8 @@ export default async function BandaApresentacoesPage({
                   Nenhum músico ativo encontrado.
                 </p>
               )}
-            </div>
+            </ModuleCard>
           )}
-        </section>
-      </div>
-    </main>
+    </ModuleLayout>
   )
 }

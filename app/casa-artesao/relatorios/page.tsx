@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { BarChart3, CircleDollarSign, Wallet } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCasaArtesaoNav } from '@/components/modulo-casa-artesao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 
 type Artesao = {
   id: string
@@ -23,10 +22,6 @@ type Fechamento = {
   competencia: string
   status: string
   total_repasse: number | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarMoeda(valor: number | null | undefined) {
@@ -117,7 +112,7 @@ export default async function CasaArtesaoRelatoriosPage({
         casa_artesao_vendas!inner (
           data_venda
         ),
-        casa_artesao_artesaos (
+        casa_artesao_artesaos!casa_artesao_producao_artesao_id_fkey (
           nome
         )
       `)
@@ -198,21 +193,16 @@ export default async function CasaArtesaoRelatoriosPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCasaArtesaoNav currentPath="/casa-artesao/relatorios" />
+    <ModuleLayout sidebar={<ModuloCasaArtesaoNav currentPath="/casa-artesao/relatorios" />}>
+      <ModuleHeader
+        title="Relatórios"
+        description="Fechamento financeiro por artesão com comissão, repasse e conferência mensal."
+        eyebrow="Relatórios"
+        icon={BarChart3}
+        accent="amber"
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Relatórios
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Fechamento financeiro por artesão com comissão, repasse e conferência mensal.
-            </p>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <form method="get" className="grid gap-4 md:grid-cols-4">
               <input
                 type="date"
@@ -254,32 +244,30 @@ export default async function CasaArtesaoRelatoriosPage({
                 {params.message}
               </p>
             )}
-          </div>
+          </ModuleCard>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Total bruto</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {formatarMoeda(totalGeral)}
-              </p>
-            </div>
+          <ModuleGrid columns={3}>
+            <ModuleMetricCard
+              label="Total bruto"
+              value={formatarMoeda(totalGeral)}
+              icon={BarChart3}
+              accent="amber"
+            />
+            <ModuleMetricCard
+              label="Comissão"
+              value={formatarMoeda(totalComissao)}
+              icon={CircleDollarSign}
+              accent="blue"
+            />
+            <ModuleMetricCard
+              label="Repasse líquido"
+              value={formatarMoeda(totalRepasse)}
+              icon={Wallet}
+              accent="emerald"
+            />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Comissão</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {formatarMoeda(totalComissao)}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Repasse líquido</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {formatarMoeda(totalRepasse)}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -319,7 +307,7 @@ export default async function CasaArtesaoRelatoriosPage({
                               Telefone: {artesao?.telefone || '-'}
                             </p>
                             <p className="text-sm text-slate-600">
-                              Pix: {artesao?.chave_pix || '-'} {artesao?.tipo_chave_pix ? `• ${artesao.tipo_chave_pix}` : ''}
+                              Pix: {artesao?.chave_pix || '-'} {artesao?.tipo_chave_pix ? ` ${artesao.tipo_chave_pix}` : ''}
                             </p>
                           </div>
 
@@ -384,9 +372,7 @@ export default async function CasaArtesaoRelatoriosPage({
                 Nenhuma venda encontrada no período informado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

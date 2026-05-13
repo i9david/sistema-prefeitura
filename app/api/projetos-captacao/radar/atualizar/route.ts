@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 
 type FonteRadar = {
   id: string
@@ -33,7 +33,7 @@ function pareceOportunidade(texto: string) {
   return (
     t.includes('edital') ||
     t.includes('chamamento') ||
-    t.includes('chamada pública') ||
+    t.includes('chamada p?blica') ||
     t.includes('chamada publica') ||
     t.includes('inscrição') ||
     t.includes('inscrições') ||
@@ -43,9 +43,9 @@ function pareceOportunidade(texto: string) {
     t.includes('programa') ||
     t.includes('pnab') ||
     t.includes('rouanet') ||
-    t.includes('convênio') ||
+    t.includes('conv?nio') ||
     t.includes('convenio') ||
-    t.includes('transferência') ||
+    t.includes('transfer?ncia') ||
     t.includes('transferencia') ||
     t.includes('captação') ||
     t.includes('captacao')
@@ -56,21 +56,21 @@ function elegivelParaPrefeitura(texto: string) {
   const t = texto.toLowerCase()
 
   return (
-    t.includes('município') ||
+    t.includes('munic?pio') ||
     t.includes('municipio') ||
     t.includes('prefeitura') ||
-    t.includes('ente público') ||
+    t.includes('ente p?blico') ||
     t.includes('ente publico') ||
     t.includes('administração pública') ||
     t.includes('administracao publica') ||
-    t.includes('órgão público') ||
+    t.includes('?rg?o p?blico') ||
     t.includes('orgao publico') ||
     t.includes('entes federativos') ||
     t.includes('governo municipal') ||
     t.includes('secretaria municipal') ||
     t.includes('fundação pública') ||
     t.includes('fundacao publica') ||
-    t.includes('consórcio público') ||
+    t.includes('cons?rcio p?blico') ||
     t.includes('consorcio publico')
   )
 }
@@ -85,7 +85,7 @@ function deveIgnorar(texto: string) {
     t.includes('homologacao') ||
     t.includes('retificação') ||
     t.includes('retificacao') ||
-    t.includes('notícia') ||
+    t.includes('not?cia') ||
     t.includes('noticia') ||
     t.includes('agenda') ||
     t.includes('evento realizado') ||
@@ -269,7 +269,7 @@ export async function GET() {
     }
   }
 
-  const mensagem = `Radar atualizado. Fontes verificadas: ${fontes.length}. Oportunidades compatíveis encontradas: ${totalCapturadas}. Novas capturas: ${totalNovas}. Já existentes ou ignoradas: ${totalIgnoradas}. Erros: ${totalErros}.`
+  const mensagem = `Radar atualizado. Fontes verificadas: ${fontes.length}. Oportunidades compat?veis encontradas: ${totalCapturadas}. Novas capturas: ${totalNovas}. J? existentes ou ignoradas: ${totalIgnoradas}. Erros: ${totalErros}.`
 
   return NextResponse.redirect(
     new URL(

@@ -1,8 +1,12 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  getMensagemLimiteUsuariosParaVinculo,
+  vincularUsuarioAoMunicipioAtual,
+} from '@/lib/saas'
 
 const areas = [
   { modulo: 'Centro Cultural', area: 'Alunos', chave: 'centro_alunos' },
@@ -71,6 +75,12 @@ export async function criarUsuarioInterno(formData: FormData) {
   const supabase = await createClient()
   const admin = createAdminClient()
 
+  const mensagemLimite = await getMensagemLimiteUsuariosParaVinculo()
+
+  if (mensagemLimite) {
+    redirect(`/administrativo/usuarios?message=${encodeURIComponent(mensagemLimite)}`)
+  }
+
   const { data: authCriado, error: authError } = await admin.auth.admin.createUser({
     email,
     password: senha,
@@ -79,7 +89,11 @@ export async function criarUsuarioInterno(formData: FormData) {
   })
 
   if (authError || !authCriado.user) {
-    redirect(`/administrativo/usuarios?message=${encodeURIComponent(authError?.message || 'Erro ao criar usuário no Auth')}`)
+    redirect(
+      `/administrativo/usuarios?message=${encodeURIComponent(
+        authError?.message || 'Erro ao criar usuário no Auth'
+      )}`
+    )
   }
 
   const { data: usuario, error } = await supabase
@@ -96,7 +110,21 @@ export async function criarUsuarioInterno(formData: FormData) {
     .single()
 
   if (error || !usuario) {
-    redirect(`/administrativo/usuarios?message=${encodeURIComponent(error?.message || 'Erro ao cadastrar usuário')}`)
+    redirect(
+      `/administrativo/usuarios?message=${encodeURIComponent(
+        error?.message || 'Erro ao cadastrar usuário'
+      )}`
+    )
+  }
+
+  try {
+    await vincularUsuarioAoMunicipioAtual(usuario.id, nivel)
+  } catch (erro) {
+    redirect(
+      `/administrativo/usuarios?message=${encodeURIComponent(
+        erro instanceof Error ? erro.message : 'Erro ao vincular usuário ao município'
+      )}`
+    )
   }
 
   const permissoes = extrairPermissoesDoFormulario(formData, usuario.id)

@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { CheckCircle2, CircleDollarSign, FileCheck2, WalletCards } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCasaArtesaoNav } from '@/components/modulo-casa-artesao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import {
   gerarFechamentoMensal,
   marcarFechamentoComoPago,
@@ -34,10 +33,6 @@ type Fechamento = {
   status: string
   observacoes: string | null
   created_at: string
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarMoeda(valor: number | null | undefined) {
@@ -138,51 +133,43 @@ export default async function CasaArtesaoFechamentosPage({
   const totalPagos = fechamentos.filter((item) => item.status === 'pago').length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCasaArtesaoNav currentPath="/casa-artesao/fechamentos" />
+    <ModuleLayout sidebar={<ModuloCasaArtesaoNav currentPath="/casa-artesao/fechamentos" />}>
+      <ModuleHeader
+        title="Fechamentos"
+        description="Gere o fechamento mensal por artesão e acompanhe o status de pagamento."
+        eyebrow="Gestão"
+        icon={WalletCards}
+        accent="amber"
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Fechamentos
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Gere o fechamento mensal por artesão e acompanhe o status de pagamento.
-            </p>
-          </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard
+              label="Total de fechamentos"
+              value={totalFechamentos}
+              icon={FileCheck2}
+              accent="amber"
+            />
+            <ModuleMetricCard
+              label="Abertos"
+              value={totalAbertos}
+              icon={WalletCards}
+              accent="blue"
+            />
+            <ModuleMetricCard
+              label="Fechados"
+              value={totalFechados}
+              icon={CheckCircle2}
+              accent="violet"
+            />
+            <ModuleMetricCard
+              label="Pagos"
+              value={totalPagos}
+              icon={CircleDollarSign}
+              accent="emerald"
+            />
+          </ModuleGrid>
 
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Total de fechamentos</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalFechamentos}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Abertos</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalAbertos}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Fechados</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalFechados}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Pagos</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalPagos}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Gerar fechamento mensal
             </h2>
@@ -242,9 +229,9 @@ export default async function CasaArtesaoFechamentosPage({
                 </button>
               </div>
             </form>
-          </div>
+          </ModuleCard>
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <form method="get" className="grid gap-4 md:grid-cols-3">
               <select
                 name="artesao_id"
@@ -277,9 +264,9 @@ export default async function CasaArtesaoFechamentosPage({
                 Filtrar
               </button>
             </form>
-          </div>
+          </ModuleCard>
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Histórico de fechamentos
             </h2>
@@ -337,7 +324,7 @@ export default async function CasaArtesaoFechamentosPage({
                             </p>
                             <p>
                               <span className="font-semibold">Pix:</span>{' '}
-                              {artesao?.chave_pix || '-'} {artesao?.tipo_chave_pix ? `• ${artesao.tipo_chave_pix}` : ''}
+                              {artesao?.chave_pix || '-'} {artesao?.tipo_chave_pix ? ` ${artesao.tipo_chave_pix}` : ''}
                             </p>
                             <p>
                               <span className="font-semibold">Observações:</span>{' '}
@@ -381,9 +368,7 @@ export default async function CasaArtesaoFechamentosPage({
                 Nenhum fechamento encontrado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

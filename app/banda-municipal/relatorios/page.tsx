@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { BarChart3, Calendar, Music, Users } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { ModuloBandaMunicipalNav } from '@/components/modulo-banda-municipal-nav'
 
 type Musico = {
@@ -27,10 +26,6 @@ type Ensaio = {
   horario_inicio: string
   local: string | null
   status: string
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarData(data: string | null | undefined) {
@@ -153,228 +148,177 @@ export default async function BandaMunicipalRelatoriosPage() {
     .slice(0, 5)
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloBandaMunicipalNav currentPath="/banda-municipal/relatorios" />
+    <ModuleLayout sidebar={<ModuloBandaMunicipalNav currentPath="/banda-municipal/relatorios" />}>
+      <ModuleHeader
+        title="Relatórios da Banda Municipal"
+        eyebrow="Relatórios"
+        description="Indicadores consolidados de músicos, instrumentos e agenda da Banda Municipal."
+        icon={BarChart3}
+        accent="violet"
+        context="Gestão musical"
+        action={
+          <Link href="/banda-municipal" className="btn-secondary w-full justify-center md:w-auto">
+            Voltar ao módulo
+          </Link>
+        }
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Relatórios da Banda Municipal
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Indicadores consolidados do módulo da Banda Municipal
-                </p>
-              </div>
+      <ModuleGrid columns={3}>
+        <ModuleMetricCard
+          label="Total de músicos"
+          value={totalMusicos}
+          description={`Ativos: ${musicosAtivos} | Inativos: ${musicosInativos}`}
+          icon={Users}
+          accent="violet"
+        />
+        <ModuleMetricCard
+          label="Total de instrumentos"
+          value={totalInstrumentos}
+          description={`Disponíveis: ${instrumentosDisponiveis} | Em uso: ${instrumentosEmUso}`}
+          icon={Music}
+          accent="blue"
+        />
+        <ModuleMetricCard
+          label="Total de ensaios"
+          value={totalEnsaios}
+          description={`Agendados: ${ensaiosAgendados} | Realizados: ${ensaiosRealizados}`}
+          icon={Calendar}
+          accent="emerald"
+        />
+      </ModuleGrid>
 
-              <Link
-                href="/banda-municipal"
-                className="inline-flex rounded-2xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Voltar ao módulo
-              </Link>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <ModuleCard>
+          <h2 className="text-lg font-bold tracking-tight text-slate-950">
+            Situação dos instrumentos
+          </h2>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Disponíveis</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosDisponiveis}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Em uso</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosEmUso}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Manutenção</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosManutencao}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Baixados</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosBaixados}</p>
             </div>
           </div>
+        </ModuleCard>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Total de músicos</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalMusicos}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Ativos: {musicosAtivos} • Inativos: {musicosInativos}
-              </p>
+        <ModuleCard>
+          <h2 className="text-lg font-bold tracking-tight text-slate-950">
+            Conservação dos instrumentos
+          </h2>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Ótimo</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosOtimos}</p>
             </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Total de instrumentos</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalInstrumentos}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Disponíveis: {instrumentosDisponiveis} • Em uso: {instrumentosEmUso}
-              </p>
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Bom</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosBons}</p>
             </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Total de ensaios</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {totalEnsaios}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Agendados: {ensaiosAgendados} • Realizados: {ensaiosRealizados}
-              </p>
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Regular</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosRegulares}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Com problema</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">{instrumentosComProblema}</p>
             </div>
           </div>
-
-          <div className="grid gap-6 xl:grid-cols-2">
-            <div className={cardClassName()}>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Situação dos instrumentos
-              </h2>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Disponíveis</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosDisponiveis}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Em uso</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosEmUso}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Manutenção</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosManutencao}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Baixados</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosBaixados}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className={cardClassName()}>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Conservação dos instrumentos
-              </h2>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Ótimo</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosOtimos}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Bom</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosBons}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Regular</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosRegulares}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Com problema</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{instrumentosComProblema}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-2">
-            <div className={cardClassName()}>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Próximos ensaios
-              </h2>
-
-              {proximosEnsaios.length > 0 ? (
-                <div className="mt-5 space-y-3">
-                  {proximosEnsaios.map((ensaio) => (
-                    <div
-                      key={ensaio.id}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="font-semibold text-slate-900">{ensaio.titulo}</p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            {formatarData(ensaio.data_ensaio)} • {ensaio.horario_inicio}
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            Local: {ensaio.local || '-'}
-                          </p>
-                        </div>
-
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass(ensaio.status)}`}>
-                          {ensaio.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-4 text-sm text-slate-600">
-                  Nenhum ensaio futuro encontrado.
-                </p>
-              )}
-            </div>
-
-            <div className={cardClassName()}>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Últimos ensaios
-              </h2>
-
-              {ultimosEnsaios.length > 0 ? (
-                <div className="mt-5 space-y-3">
-                  {ultimosEnsaios.map((ensaio) => (
-                    <div
-                      key={ensaio.id}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="font-semibold text-slate-900">{ensaio.titulo}</p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            {formatarData(ensaio.data_ensaio)} • {ensaio.horario_inicio}
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            Local: {ensaio.local || '-'}
-                          </p>
-                        </div>
-
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass(ensaio.status)}`}>
-                          {ensaio.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-4 text-sm text-slate-600">
-                  Nenhum ensaio registrado.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              Situação dos ensaios
-            </h2>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Agendados</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{ensaiosAgendados}</p>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Realizados</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{ensaiosRealizados}</p>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Cancelados</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{ensaiosCancelados}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
-            <p className="text-sm text-slate-600">
-              Assim que a área de apresentações for estruturada, este relatório poderá incluir
-              agenda oficial, histórico de eventos, participação da banda e indicadores de atuação institucional.
-            </p>
-          </div>
-        </section>
+        </ModuleCard>
       </div>
-    </main>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <ModuleCard>
+          <h2 className="text-lg font-bold tracking-tight text-slate-950">
+            Próximos ensaios
+          </h2>
+
+          {proximosEnsaios.length > 0 ? (
+            <div className="mt-5 space-y-3">
+              {proximosEnsaios.map((ensaio) => (
+                <div key={ensaio.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-950">{ensaio.titulo}</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {formatarData(ensaio.data_ensaio)} | {ensaio.horario_inicio}
+                      </p>
+                      <p className="text-sm text-slate-600">Local: {ensaio.local || '-'}</p>
+                    </div>
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass(ensaio.status)}`}>
+                      {ensaio.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-600">Nenhum ensaio futuro encontrado.</p>
+          )}
+        </ModuleCard>
+
+        <ModuleCard>
+          <h2 className="text-lg font-bold tracking-tight text-slate-950">
+            Últimos ensaios
+          </h2>
+
+          {ultimosEnsaios.length > 0 ? (
+            <div className="mt-5 space-y-3">
+              {ultimosEnsaios.map((ensaio) => (
+                <div key={ensaio.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-950">{ensaio.titulo}</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {formatarData(ensaio.data_ensaio)} | {ensaio.horario_inicio}
+                      </p>
+                      <p className="text-sm text-slate-600">Local: {ensaio.local || '-'}</p>
+                    </div>
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass(ensaio.status)}`}>
+                      {ensaio.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-600">Nenhum ensaio registrado.</p>
+          )}
+        </ModuleCard>
+      </div>
+
+      <ModuleCard>
+        <h2 className="text-lg font-bold tracking-tight text-slate-950">
+          Situação dos ensaios
+        </h2>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Agendados</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">{ensaiosAgendados}</p>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Realizados</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">{ensaiosRealizados}</p>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Cancelados</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">{ensaiosCancelados}</p>
+          </div>
+        </div>
+      </ModuleCard>
+    </ModuleLayout>
   )
 }

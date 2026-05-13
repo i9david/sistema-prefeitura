@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { UserPlus, Users } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { ModuloBandaMunicipalNav } from '@/components/modulo-banda-municipal-nav'
 import {
   ativarMusico,
@@ -26,10 +24,6 @@ type Musico = {
   status: string
   observacoes: string | null
   created_at: string
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarTelefone(valor: string | null | undefined) {
@@ -115,35 +109,26 @@ export default async function BandaMusicosPage({
   const mostrarFormulario = modoNovo || !!musicoEditando
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloBandaMunicipalNav currentPath="/banda-municipal/musicos" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Músicos
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Cadastro e gestão dos integrantes da Banda Municipal.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/banda-municipal/musicos?novo=1"
-                  className="inline-flex rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Novo músico
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloBandaMunicipalNav currentPath="/banda-municipal/musicos" />}>
+      <ModuleHeader
+        title="Músicos"
+        eyebrow="Cadastros"
+        description="Cadastro e gestão dos integrantes da Banda Municipal."
+        icon={Users}
+        accent="violet"
+        context="Banda Municipal"
+        action={
+          !mostrarFormulario ? (
+            <a href="/banda-municipal/musicos?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <UserPlus size={16} aria-hidden="true" />
+              Novo músico
+            </a>
+          ) : null
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-slate-900">
                   {musicoEditando ? 'Editar músico' : 'Novo músico'}
@@ -263,10 +248,10 @@ export default async function BandaMusicosPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -413,9 +398,7 @@ export default async function BandaMusicosPage({
                 Nenhum músico encontrado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

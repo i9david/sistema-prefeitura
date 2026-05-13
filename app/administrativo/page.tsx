@@ -1,15 +1,26 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import {
+  BarChart3,
+  CalendarDays,
+  LayoutDashboard,
+  MessageCircle,
+  Package,
+  Settings,
+  ShieldCheck,
+  UserRoundPlus,
+  Users,
+} from 'lucide-react'
+import {
+  ModuleAreaCard,
+  ModuleMetricCard,
+} from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
+import { ModuleGrid, ModuleSectionGrid } from '@/components/module/module-grid'
 import { ModuloAdministrativoNav } from '@/components/modulo-administrativo-nav'
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-}
-
-function moduloCardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5'
-}
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { getTenantPath } from '@/lib/tenant-paths-server'
 
 export default async function AdministrativoPage() {
   const supabase = await createClient()
@@ -47,96 +58,69 @@ export default async function AdministrativoPage() {
   const produtosAtivos = produtos.filter((item) => item.status === 'ativo').length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloAdministrativoNav currentPath="/administrativo" />
+    <ModuleLayout sidebar={<ModuloAdministrativoNav currentPath="/administrativo" />}>
+      <ModuleHeader
+        title="Administrativo"
+        eyebrow="Gestão do sistema"
+        description="Controle geral do sistema, usuários, acessos, configurações, comunicação e indicadores administrativos."
+        icon={LayoutDashboard}
+        accent="blue"
+        context="Governança do sistema"
+        action={
+          <Link
+            href={getTenantPath('/administrativo/usuarios')}
+            className="btn-primary w-full justify-center md:w-auto"
+          >
+            <ShieldCheck size={16} aria-hidden="true" />
+            Gerenciar acessos
+          </Link>
+        }
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Administrativo
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Controle geral do sistema, usuários, acessos, configurações e indicadores administrativos.
-            </p>
-          </div>
+      <ModuleGrid columns={5}>
+        <ModuleMetricCard label="Usuários ativos" value={usuariosAtivos} icon={ShieldCheck} />
+        <ModuleMetricCard label="Alunos ativos" value={alunosAtivos} icon={Users} />
+        <ModuleMetricCard label="Visitantes ativos" value={visitantesAtivos} icon={UserRoundPlus} />
+        <ModuleMetricCard label="Artesãos ativos" value={artesaosAtivos} icon={Users} />
+        <ModuleMetricCard label="Produtos ativos" value={produtosAtivos} icon={Package} />
+      </ModuleGrid>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Usuários ativos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {usuariosAtivos}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Alunos ativos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {alunosAtivos}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Visitantes ativos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {visitantesAtivos}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Artesãos ativos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {artesaosAtivos}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Produtos ativos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {produtosAtivos}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Link href="/administrativo/usuarios" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Usuários e Acessos
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Consulte usuários, níveis de acesso, status e vínculos internos.
-              </p>
-            </Link>
-
-            <Link href="/administrativo/configuracoes" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Configurações do Sistema
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Edite o nome exibido globalmente no sistema e outras configurações gerais.
-              </p>
-            </Link>
-
-            <Link href="/administrativo/agenda" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Agenda Institucional
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Acompanhe compromissos, eventos e atividades administrativas.
-              </p>
-            </Link>
-
-            <Link href="/relatorios" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Relatórios Gerais
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Indicadores consolidados de todos os módulos do sistema.
-              </p>
-            </Link>
-          </div>
-        </section>
-      </div>
-    </main>
+      <ModuleSectionGrid
+        title="Áreas administrativas"
+        description="Acesse as rotinas centrais de operação e governança do sistema."
+        columns={3}
+      >
+        <ModuleAreaCard
+          title="Usuários e acessos"
+          description="Consulte usuários, níveis de acesso, status e vínculos internos."
+          href="/administrativo/usuarios"
+          icon={ShieldCheck}
+        />
+        <ModuleAreaCard
+          title="Comunicação"
+          description="Configure mensagens e comunicações institucionais."
+          href="/administrativo/comunicacao"
+          icon={MessageCircle}
+        />
+        <ModuleAreaCard
+          title="Configurações"
+          description="Edite o nome exibido globalmente no sistema e ajustes gerais."
+          href="/administrativo/configuracoes"
+          icon={Settings}
+        />
+        <ModuleAreaCard
+          title="Agenda institucional"
+          description="Acompanhe compromissos, eventos e atividades administrativas."
+          href="/administrativo/agenda"
+          icon={CalendarDays}
+        />
+        <ModuleAreaCard
+          title="Relatórios gerais"
+          description="Indicadores consolidados de todos os módulos do sistema."
+          href="/administrativo/relatorios"
+          icon={BarChart3}
+        />
+      </ModuleSectionGrid>
+    </ModuleLayout>
   )
 }

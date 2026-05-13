@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 
 type Modalidade = {
   id: string
@@ -30,7 +30,7 @@ type Props = {
   dataFim?: string
 }
 
-export function RelatoriosFiltros({
+function RelatoriosFiltrosInner({
   modalidades,
   aulas,
   alunos,
@@ -123,3 +123,5 @@ export function RelatoriosFiltros({
     </form>
   )
 }
+
+export const RelatoriosFiltros = memo(RelatoriosFiltrosInner)

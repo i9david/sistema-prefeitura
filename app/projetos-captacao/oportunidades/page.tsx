@@ -1,13 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { ExternalLink, Sparkles, FilePlus2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { ExternalLink, FilePlus2, FileSearch, Globe2, Plus, Sparkles } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCaptacaoNav } from '@/components/modulo-captacao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import {
   alterarStatusOportunidadeCaptacao,
   atualizarOportunidadeCaptacao,
@@ -51,15 +49,6 @@ type Oportunidade = {
   elegibilidade_prefeitura: string | null
   score_prefeitura: number | null
   recomendacao_ia: string | null
-  fontes?: {
-    id: string
-    nome: string
-    orgao: string | null
-  } | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarMoeda(valor: number | null | undefined) {
@@ -208,12 +197,7 @@ export default async function OportunidadesCaptacaoPage({
       prazo_ia,
       elegibilidade_prefeitura,
       score_prefeitura,
-      recomendacao_ia,
-      fontes:captacao_fontes (
-        id,
-        nome,
-        orgao
-      )
+      recomendacao_ia
     `)
     .order('prazo_inscricao', { ascending: true, nullsFirst: false })
 
@@ -236,6 +220,12 @@ export default async function OportunidadesCaptacaoPage({
 
   const fontes = (fontesData ?? []) as Fonte[]
   const oportunidades = (oportunidadesData ?? []) as unknown as Oportunidade[]
+  const fontesPorId = new Map(fontes.map((fonte) => [fonte.id, fonte]))
+
+  function getFonte(fonteId: string | null) {
+    if (!fonteId) return null
+    return fontesPorId.get(fonteId) ?? null
+  }
 
   const oportunidadeEditando = editarId
     ? oportunidades.find((item) => item.id === editarId)
@@ -246,41 +236,27 @@ export default async function OportunidadesCaptacaoPage({
   const oportunidadesAbertas = oportunidades.filter((item) => item.status === 'aberta').length
   const oportunidadesFederais = oportunidades.filter((item) => item.esfera === 'Federal').length
   const oportunidadesComIA = oportunidades.filter((item) => item.resumo_ia).length
-  const valorTotal = oportunidades.reduce(
-    (acc, item) => acc + Number(item.valor_disponivel || 0),
-    0
-  )
-
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCaptacaoNav currentPath="/projetos-captacao/oportunidades" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Oportunidades
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Monitore editais, chamadas públicas, programas, prazos e oportunidades de captação.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/projetos-captacao/oportunidades?novo=1"
-                  className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Nova oportunidade
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloCaptacaoNav currentPath="/projetos-captacao/oportunidades" />}>
+      <ModuleHeader
+        title="Oportunidades"
+        eyebrow="Cadastros"
+        description="Monitore editais, chamadas públicas, programas, prazos e oportunidades de captação."
+        icon={FileSearch}
+        accent="violet"
+        context="Editais e chamadas"
+        action={
+          !mostrarFormulario && (
+            <a href="/projetos-captacao/oportunidades?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <Plus size={16} aria-hidden="true" />
+              Nova oportunidade
+            </a>
+          )
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -464,40 +440,17 @@ export default async function OportunidadesCaptacaoPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Total de oportunidades</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {oportunidades.length}
-              </p>
-            </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard label="Total de oportunidades" value={oportunidades.length} icon={FileSearch} accent="violet" />
+            <ModuleMetricCard label="Abertas" value={oportunidadesAbertas} icon={ExternalLink} accent="violet" />
+            <ModuleMetricCard label="Federais" value={oportunidadesFederais} icon={Globe2} accent="violet" />
+            <ModuleMetricCard label="Analisadas por IA" value={oportunidadesComIA} icon={Sparkles} accent="violet" />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Abertas</p>
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                {oportunidadesAbertas}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Federais</p>
-              <p className="mt-2 text-2xl font-bold text-blue-700">
-                {oportunidadesFederais}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Analisadas por IA</p>
-              <p className="mt-2 text-2xl font-bold text-violet-700">
-                {oportunidadesComIA}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -590,11 +543,14 @@ export default async function OportunidadesCaptacaoPage({
 
             {oportunidades.length > 0 ? (
               <div className="mt-6 space-y-4">
-                {oportunidades.map((oportunidade) => (
-                  <div
-                    key={oportunidade.id}
-                    className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                  >
+                {oportunidades.map((oportunidade) => {
+                  const fonte = getFonte(oportunidade.fonte_id)
+
+                  return (
+                    <div
+                      key={oportunidade.id}
+                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                    >
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="space-y-3">
                         <div>
@@ -642,7 +598,7 @@ export default async function OportunidadesCaptacaoPage({
                         <div className="space-y-1 text-sm text-slate-700">
                           <p>
                             <span className="font-semibold">Fonte:</span>{' '}
-                            {oportunidade.fontes?.nome || 'Sem fonte vinculada'}
+                            {fonte?.nome || 'Sem fonte vinculada'}
                           </p>
 
                           <p>
@@ -759,16 +715,15 @@ export default async function OportunidadesCaptacaoPage({
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="mt-4 text-sm text-slate-600">
                 Nenhuma oportunidade encontrada.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

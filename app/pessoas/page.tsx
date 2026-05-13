@@ -1,12 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { PageEmptyState, PageFilters, PageList, PageShell } from '@/components/page-shell'
+import { FormMessage, SelectInput, TextInput } from '@/components/form'
 
 type Pessoa = {
   id: string
@@ -26,10 +23,6 @@ type Visitante = {
 
 type Leitor = {
   pessoa_id: string | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarTelefone(valor: string | null | undefined) {
@@ -122,75 +115,59 @@ export default async function PessoasPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <<Sidebar currentPath="/" /> />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              CRM de Pessoas
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Cadastro geral navegável da Secretaria com histórico consolidado por pessoa
-            </p>
-          </div>
-
-          <div className={cardClassName()}>
-            <form method="get" className="grid gap-4 md:grid-cols-[1fr_260px_140px]">
-              <input
+    <PageShell
+      nav={<Sidebar currentPath="/" />}
+      title="CRM de Pessoas"
+      subtitle="Cadastro geral navegável da Secretaria com histórico consolidado por pessoa."
+      primaryAction={null}
+    >
+      <PageFilters>
+        <form method="get" className="grid gap-4 md:grid-cols-[1fr_260px_140px]">
+              <TextInput
                 type="text"
                 name="busca"
                 placeholder="Buscar por nome"
                 defaultValue={busca}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
 
-              <select
+              <SelectInput
                 name="modulo"
                 defaultValue={moduloFiltro}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Todos os módulos</option>
                 <option value="Centro Cultural">Centro Cultural</option>
                 <option value="Visitantes">Visitantes</option>
                 <option value="Biblioteca">Biblioteca</option>
-              </select>
+              </SelectInput>
 
               <button
                 type="submit"
-                className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="btn-primary"
               >
                 Filtrar
               </button>
-            </form>
+        </form>
 
-            {params.message && (
-              <p className="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                {params.message}
-              </p>
-            )}
+        {params.message && (
+          <div className="mt-4">
+            <FormMessage>{params.message}</FormMessage>
           </div>
+        )}
+      </PageFilters>
 
-          <div className={cardClassName()}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                  Pessoas cadastradas
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Base única consolidada da Secretaria
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
-                Registros: {linhas.length}
-              </div>
-            </div>
+      <PageList
+        title="Pessoas cadastradas"
+        subtitle="Base única consolidada da Secretaria."
+        meta={
+          <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
+            Registros: {linhas.length}
+          </div>
+        }
+      >
 
             {linhas.length > 0 ? (
-              <div className="mt-6 overflow-x-auto">
-                <table className="min-w-full border-separate border-spacing-y-2 text-sm">
+              <div className="overflow-x-auto">
+                <table>
                   <thead>
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-slate-600">Nome</th>
@@ -237,7 +214,7 @@ export default async function PessoasPage({
                         <td className="rounded-r-2xl px-4 py-4">
                           <Link
                             href={`/pessoas/${item.id}`}
-                            className="inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                            className="btn-primary py-2"
                           >
                             Ver perfil
                           </Link>
@@ -248,13 +225,11 @@ export default async function PessoasPage({
                 </table>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-slate-600">
+              <PageEmptyState>
                 Nenhuma pessoa encontrada.
-              </p>
+              </PageEmptyState>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+      </PageList>
+    </PageShell>
   )
 }

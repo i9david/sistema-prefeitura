@@ -1,5 +1,7 @@
 'use client'
 
+import { memo, useCallback } from 'react'
+
 type ModuloAcessoCardProps = {
   titulo: string
   descricao: string
@@ -8,81 +10,58 @@ type ModuloAcessoCardProps = {
   cor?: 'azul' | 'verde' | 'roxo' | 'laranja'
 }
 
-function getClasses(cor: ModuloAcessoCardProps['cor']) {
+function getBadge(cor: ModuloAcessoCardProps['cor']) {
   switch (cor) {
     case 'verde':
-      return {
-        botao: 'bg-emerald-600 hover:bg-emerald-700',
-        badge: 'bg-emerald-100 text-emerald-700',
-      }
+      return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
     case 'roxo':
-      return {
-        botao: 'bg-violet-600 hover:bg-violet-700',
-        badge: 'bg-violet-100 text-violet-700',
-      }
+      return 'bg-violet-50 text-violet-700 ring-1 ring-violet-200'
     case 'laranja':
-      return {
-        botao: 'bg-orange-600 hover:bg-orange-700',
-        badge: 'bg-orange-100 text-orange-700',
-      }
+      return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
     default:
-      return {
-        botao: 'bg-blue-600 hover:bg-blue-700',
-        badge: 'bg-blue-100 text-blue-700',
-      }
+      return 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
   }
 }
 
-export function ModuloAcessoCard({
+function ModuloAcessoCardInner({
   titulo,
   descricao,
   href,
   permitido,
   cor = 'azul',
 }: ModuloAcessoCardProps) {
-  const classes = getClasses(cor)
-
-  function entrar() {
+  const entrar = useCallback(() => {
     if (!permitido) {
       window.alert('Usuário não tem acesso a este módulo')
       return
     }
 
     window.location.href = href
-  }
+  }, [permitido, href])
 
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-      <div className="flex items-start justify-between gap-4">
+    <div className="ui-card p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-xl font-bold tracking-tight text-slate-900">
+          <h3 className="text-lg font-bold tracking-tight text-slate-950">
             {titulo}
           </h3>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-slate-500">
             {descricao}
           </p>
         </div>
 
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-            permitido
-              ? classes.badge
-              : 'bg-slate-200 text-slate-600'
-          }`}
-        >
+        <span className={`badge ${permitido ? getBadge(cor) : 'badge-muted'}`}>
           {permitido ? 'Acesso liberado' : 'Sem acesso'}
         </span>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-5">
         <button
           type="button"
           onClick={entrar}
-          className={`rounded-2xl px-5 py-3 text-sm font-semibold text-white transition ${
-            permitido
-              ? classes.botao
-              : 'cursor-not-allowed bg-slate-400'
-          }`}
+          className={permitido ? 'btn-primary' : 'btn-secondary cursor-not-allowed'}
+          disabled={!permitido}
         >
           Entrar no módulo
         </button>
@@ -90,3 +69,5 @@ export function ModuloAcessoCard({
     </div>
   )
 }
+
+export const ModuloAcessoCard = memo(ModuloAcessoCardInner)

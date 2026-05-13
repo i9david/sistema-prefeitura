@@ -1,21 +1,26 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import {
+  BarChart3,
+  ClipboardCheck,
+  FileSearch,
+  FolderKanban,
+  GitCompareArrows,
+  Landmark,
+  LayoutDashboard,
+  Radar,
+} from 'lucide-react'
+import {
+  ModuleAreaCard,
+  ModuleCard,
+  ModuleMetricCard,
+} from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
+import { ModuleGrid, ModuleSectionGrid } from '@/components/module/module-grid'
 import { ModuloCaptacaoNav } from '@/components/modulo-captacao-nav'
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-}
-
-function moduloCardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5'
-}
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { getTenantPath } from '@/lib/tenant-paths-server'
 
 export default async function ProjetosCaptacaoPage() {
   const supabase = await createClient()
@@ -49,127 +54,85 @@ export default async function ProjetosCaptacaoPage() {
   const analisesPendentes = analises.filter((item) => item.status === 'em_analise').length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCaptacaoNav currentPath="/projetos-captacao" />
+    <ModuleLayout sidebar={<ModuloCaptacaoNav currentPath="/projetos-captacao" />}>
+      <ModuleHeader
+        title="Projetos e Captação"
+        eyebrow="Gestão estratégica"
+        description="Gestão de ideias, projetos, análises técnicas, fontes de recursos e oportunidades de captação para cultura e turismo."
+        icon={LayoutDashboard}
+        accent="violet"
+        context="Estratégia e recursos"
+        action={
+          <Link
+            href={getTenantPath('/projetos-captacao/oportunidades')}
+            className="btn-primary w-full justify-center md:w-auto"
+          >
+            <FileSearch size={16} aria-hidden="true" />
+            Ver oportunidades
+          </Link>
+        }
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Projetos e Captação
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Gestão de ideias, projetos, análises técnicas, fontes de recursos e oportunidades de captação para cultura e turismo.
+      <ModuleGrid columns={4}>
+        <ModuleMetricCard label="Projetos cadastrados" value={projetos.length} icon={FolderKanban} accent="violet" />
+        <ModuleMetricCard label="Projetos em análise" value={projetosEmAnalise} icon={ClipboardCheck} accent="violet" />
+        <ModuleMetricCard label="Oportunidades abertas" value={oportunidadesAbertas} icon={FileSearch} accent="violet" />
+        <ModuleMetricCard label="Fontes ativas" value={fontesAtivas} icon={Landmark} accent="violet" />
+      </ModuleGrid>
+
+      <ModuleSectionGrid
+        title="Cadastros"
+        description="Base estratégica de projetos, fontes e oportunidades."
+        columns={3}
+      >
+        <ModuleAreaCard title="Projetos" description="Cadastre ideias, propostas e projetos para análise da diretoria." href="/projetos-captacao/projetos" icon={FolderKanban} accent="violet" />
+        <ModuleAreaCard title="Fontes de recursos" description="Organize órgãos, programas, portais oficiais e linhas de recurso." href="/projetos-captacao/fontes" icon={Landmark} accent="violet" />
+        <ModuleAreaCard title="Oportunidades" description="Monitore editais, chamadas públicas, prazos e valores disponíveis." href="/projetos-captacao/oportunidades" icon={FileSearch} accent="violet" />
+      </ModuleSectionGrid>
+
+      <ModuleSectionGrid
+        title="Operação"
+        description="Análise técnica, inteligência e compatibilidade entre projetos e editais."
+        columns={3}
+      >
+        <ModuleAreaCard title="Análises técnicas" description="Registre pareceres, pendências, viabilidade e próximos passos." href="/projetos-captacao/analises" icon={ClipboardCheck} accent="violet" />
+        <ModuleAreaCard title="Radar de editais" description="Acompanhe oportunidades federais, estaduais e institucionais." href="/projetos-captacao/radar" icon={Radar} accent="violet" />
+        <ModuleAreaCard title="Compatibilidade" description="Relacione projetos cadastrados com oportunidades compatíveis." href="/projetos-captacao/matching" icon={GitCompareArrows} accent="violet" />
+      </ModuleSectionGrid>
+
+      <ModuleCard>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-950">Radar estratégico</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Acompanhe a maturidade da carteira e priorize projetos com maior chance de captação.
             </p>
           </div>
+          <Link href={getTenantPath('/projetos-captacao/relatorios')} className="btn-secondary">
+            <BarChart3 size={16} aria-hidden="true" />
+            Relatórios
+          </Link>
+        </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Projetos cadastrados</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {projetos.length}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Projetos em análise</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {projetosEmAnalise}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Oportunidades abertas</p>
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                {oportunidadesAbertas}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Fontes ativas</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {fontesAtivas}
-              </p>
-            </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+            <p className="text-sm text-slate-500">Análises pendentes</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">{analisesPendentes}</p>
           </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Link href="/projetos-captacao/projetos" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">Projetos</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Cadastre ideias, propostas e projetos para análise da diretoria.
-              </p>
-            </Link>
-
-            <Link href="/projetos-captacao/analises" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">Análise técnica</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Registre pareceres, pendências, viabilidade e próximos passos.
-              </p>
-            </Link>
-
-            <Link href="/projetos-captacao/fontes" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">Fontes de recursos</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Organize órgãos, programas, portais oficiais e linhas de recurso.
-              </p>
-            </Link>
-
-            <Link href="/projetos-captacao/oportunidades" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">Oportunidades</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Monitore editais, chamadas públicas, prazos e valores disponíveis.
-              </p>
-            </Link>
-
-            <Link href="/projetos-captacao/matching" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">Matching</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Relacione projetos cadastrados com oportunidades compatíveis.
-              </p>
-            </Link>
-
-            <Link href="/projetos-captacao/relatorios" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">Relatórios</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Acompanhe carteira de projetos, oportunidades e captação.
-              </p>
-            </Link>
-          </div>
-
-          <div className={cardClassName()}>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              Radar estratégico
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              O radar permite acompanhar oportunidades federais, estaduais e institucionais para transformar ideias em projetos viáveis.
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+            <p className="text-sm text-slate-500">Projetos cultura</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">
+              {projetos.filter((item) => item.area === 'cultura').length}
             </p>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Análises pendentes</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
-                  {analisesPendentes}
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Projetos cultura</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
-                  {projetos.filter((item) => item.area === 'cultura').length}
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Projetos turismo</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
-                  {projetos.filter((item) => item.area === 'turismo').length}
-                </p>
-              </div>
-            </div>
           </div>
-        </section>
-      </div>
-    </main>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+            <p className="text-sm text-slate-500">Projetos turismo</p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">
+              {projetos.filter((item) => item.area === 'turismo').length}
+            </p>
+          </div>
+        </div>
+      </ModuleCard>
+    </ModuleLayout>
   )
 }

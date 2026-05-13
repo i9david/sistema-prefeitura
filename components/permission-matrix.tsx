@@ -1,5 +1,7 @@
 'use client'
 
+import { memo, useCallback } from 'react'
+
 type Permissao = {
   modulo: string
   area: string
@@ -38,10 +40,10 @@ function temPermissao(
   return permissao.pode_excluir
 }
 
-export function PermissionMatrix({ permissoes, permissoesAtuais = [] }: Props) {
+function PermissionMatrixInner({ permissoes, permissoesAtuais = [] }: Props) {
   const modulos = Array.from(new Set(permissoes.map((item) => item.modulo)))
 
-  function handleDependency(baseKey: string, checked: boolean) {
+  const handleDependency = useCallback((baseKey: string, checked: boolean) => {
     const visualizar = document.querySelector<HTMLInputElement>(
       `input[name="${baseKey}_visualizar"]`
     )
@@ -49,7 +51,7 @@ export function PermissionMatrix({ permissoes, permissoesAtuais = [] }: Props) {
     if (checked && visualizar) {
       visualizar.checked = true
     }
-  }
+  }, [])
 
   return (
     <div className="space-y-4">
@@ -140,3 +142,5 @@ export function PermissionMatrix({ permissoes, permissoesAtuais = [] }: Props) {
     </div>
   )
 }
+
+export const PermissionMatrix = memo(PermissionMatrixInner)

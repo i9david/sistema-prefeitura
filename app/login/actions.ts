@@ -1,19 +1,13 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 import { createClient } from '@/lib/supabase/server'
 
 export async function login(formData: FormData) {
-  const email = String(formData.get('email') ?? '')
-  const password = String(formData.get('password') ?? '')
-
   const supabase = await createClient()
+
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
 
   const { error } = await supabase.auth.signInWithPassword({
     email,
@@ -21,8 +15,8 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    redirect(`/login?message=${encodeURIComponent(error.message)}`)
+    redirect('/login?message=Email%20ou%20senha%20inv%C3%A1lidos')
   }
 
-  redirect('/dashboard')
+  redirect('/')
 }

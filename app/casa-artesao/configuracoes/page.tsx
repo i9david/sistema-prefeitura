@@ -1,17 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { Settings } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCasaArtesaoNav } from '@/components/modulo-casa-artesao-nav'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { salvarConfiguracoesCasaArtesao } from './actions'
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-}
 
 export default async function CasaArtesaoConfiguracoesPage({
   searchParams,
@@ -41,21 +35,16 @@ export default async function CasaArtesaoConfiguracoesPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCasaArtesaoNav currentPath="/casa-artesao/configuracoes" />
+    <ModuleLayout sidebar={<ModuloCasaArtesaoNav currentPath="/casa-artesao/configuracoes" />}>
+      <ModuleHeader
+        title="Configurações"
+        description="Defina a comissão padrão da Casa do Artesão para separar automaticamente o valor da secretaria e o valor dos artesãos."
+        eyebrow="Gestão"
+        icon={Settings}
+        accent="amber"
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Configurações
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Defina a comissão padrão da Casa do Artesão para separar automaticamente o valor da secretaria e o valor dos artesãos.
-            </p>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Comissão padrão
             </h2>
@@ -98,9 +87,9 @@ export default async function CasaArtesaoConfiguracoesPage({
                 </button>
               </div>
             </form>
-          </div>
+          </ModuleCard>
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Como o sistema vai separar os valores
             </h2>
@@ -116,9 +105,7 @@ export default async function CasaArtesaoConfiguracoesPage({
                 <span className="font-semibold">Total bruto:</span> valor total das vendas antes da divisão.
               </p>
             </div>
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

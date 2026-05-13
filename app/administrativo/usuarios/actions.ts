@@ -1,10 +1,21 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+import {
+  getMensagemLimiteUsuariosParaVinculo,
+  vincularUsuarioAoMunicipioAtual,
+} from '@/lib/saas'
+
+const PERMISSAO_MODULO = 'Administrativo'
+const PERMISSAO_TELA = 'Usuarios e Acessos'
 
 export async function criarUsuarioAdministrativo(formData: FormData) {
-  const supabase = await createClient()
+  const { supabase } = await exigirPermissaoAction(
+    PERMISSAO_MODULO,
+    PERMISSAO_TELA,
+    'criar'
+  )
 
   const nome = String(formData.get('nome') || '').trim()
   const email = String(formData.get('email') || '').trim().toLowerCase()
@@ -19,22 +30,54 @@ export async function criarUsuarioAdministrativo(formData: FormData) {
     redirect('/administrativo/usuarios?novo=1&message=Informe o e-mail do usuário')
   }
 
-  const { error } = await supabase
+  const { data: usuarioExistente } = await supabase
+    .from('administrativo_usuarios')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle()
+
+  const mensagemLimite = await getMensagemLimiteUsuariosParaVinculo(
+    usuarioExistente?.id
+  )
+
+  if (mensagemLimite) {
+    redirect(`/administrativo/usuarios?novo=1&message=${encodeURIComponent(mensagemLimite)}`)
+  }
+
+  const { data: usuario, error } = await supabase
     .from('administrativo_usuarios')
     .upsert(
       { nome, email, perfil, status },
-      { onConflict: 'email' }
+      { onConflict: 'municipio_id,email' }
     )
+    .select('id')
+    .single()
 
   if (error) {
     redirect(`/administrativo/usuarios?novo=1&message=${encodeURIComponent(error.message)}`)
+  }
+
+  if (usuario?.id) {
+    try {
+      await vincularUsuarioAoMunicipioAtual(usuario.id, perfil)
+    } catch (erro) {
+      redirect(
+        `/administrativo/usuarios?novo=1&message=${encodeURIComponent(
+          erro instanceof Error ? erro.message : 'Erro ao vincular usuário ao município'
+        )}`
+      )
+    }
   }
 
   redirect('/administrativo/usuarios?message=Usuário salvo com sucesso')
 }
 
 export async function atualizarAcesso(formData: FormData) {
-  const supabase = await createClient()
+  const { supabase } = await exigirPermissaoAction(
+    PERMISSAO_MODULO,
+    PERMISSAO_TELA,
+    'editar'
+  )
 
   const id = String(formData.get('id') || '')
   const usuarioId = String(formData.get('usuario_id') || '')
@@ -61,7 +104,7 @@ export async function atualizarAcesso(formData: FormData) {
         pode_editar: podeEditar,
         pode_excluir: podeExcluir,
       },
-      { onConflict: 'id' }
+      { onConflict: 'municipio_id,id' }
     )
 
   if (error) {
@@ -72,7 +115,11 @@ export async function atualizarAcesso(formData: FormData) {
 }
 
 export async function criarAcesso(formData: FormData) {
-  const supabase = await createClient()
+  const { supabase } = await exigirPermissaoAction(
+    PERMISSAO_MODULO,
+    PERMISSAO_TELA,
+    'criar'
+  )
 
   const usuarioId = String(formData.get('usuario_id') || '')
   const modulo = String(formData.get('modulo') || '')
@@ -100,7 +147,11 @@ export async function criarAcesso(formData: FormData) {
 }
 
 export async function removerAcesso(formData: FormData) {
-  const supabase = await createClient()
+  const { supabase } = await exigirPermissaoAction(
+    PERMISSAO_MODULO,
+    PERMISSAO_TELA,
+    'excluir'
+  )
 
   const id = String(formData.get('id') || '')
 

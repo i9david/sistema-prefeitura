@@ -1,21 +1,28 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { MapPin, Plus } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { ModuloTurismoNav } from '@/components/modulo-turismo-nav'
 import {
-  criarPontoTuristico,
   ativarPonto,
+  criarPontoTuristico,
   inativarPonto,
 } from './actions'
+import { cache } from 'react'
 
-function card() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-6 shadow'
-}
+const carregarPontosTuristicos = cache(async () => {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('turismo_pontos')
+    .select('id, nome, descricao, endereco, telefone, email, site, status, created_at')
+    .order('nome')
+
+  if (error) throw error
+  return data || []
+})
 
 export default async function Page({ searchParams }: any) {
   const params = await searchParams
@@ -26,100 +33,79 @@ export default async function Page({ searchParams }: any) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data } = await supabase
-    .from('turismo_pontos')
-    .select('*')
-    .order('nome')
-
-  const pontos = data || []
+  const pontos = await carregarPontosTuristicos()
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="grid lg:grid-cols-[300px_1fr] gap-6 max-w-7xl mx-auto">
-        
-        <ModuloTurismoNav currentPath="/turismo/pontos" />
+    <ModuleLayout sidebar={<ModuloTurismoNav currentPath="/turismo/pontos" />}>
+      <ModuleHeader
+        title="Pontos turísticos"
+        description="Cadastro e acompanhamento dos atrativos, locais de visitação e pontos de interesse do município."
+        eyebrow="Cadastros"
+        icon={MapPin}
+        accent="emerald"
+        action={
+          !modoNovo && (
+            <a
+              href="/turismo/pontos?novo=1"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Novo ponto
+            </a>
+          )
+        }
+      />
 
-        <section className="space-y-6">
+      {modoNovo && (
+        <ModuleCard>
+          <h2 className="text-xl font-bold text-slate-950">Novo ponto turístico</h2>
+          <form action={criarPontoTuristico} className="mt-5 grid gap-3">
+            <input name="nome" placeholder="Nome" required className="rounded-lg border border-slate-300 px-4 py-3" />
+            <input name="tipo" placeholder="Tipo (cachoeira, parque...)" className="rounded-lg border border-slate-300 px-4 py-3" />
+            <input name="endereco" placeholder="Endereço" className="rounded-lg border border-slate-300 px-4 py-3" />
+            <input name="localizacao_google" placeholder="Link Google Maps" className="rounded-lg border border-slate-300 px-4 py-3" />
+            <textarea name="descricao" placeholder="Descrição" className="min-h-28 rounded-lg border border-slate-300 px-4 py-3" />
+            <textarea name="observacoes" placeholder="Observações" className="min-h-24 rounded-lg border border-slate-300 px-4 py-3" />
+            <button className="rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
+              Salvar
+            </button>
+          </form>
+        </ModuleCard>
+      )}
 
-          {/* HEADER */}
-          <div className={card()}>
-            <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold">
-                Pontos Turísticos
-              </h1>
-
-              {!modoNovo && (
-                <a
-                  href="/turismo/pontos?novo=1"
-                  className="bg-violet-600 text-white px-4 py-2 rounded-xl"
-                >
-                  Novo ponto
-                </a>
-              )}
-            </div>
-          </div>
-
-          {/* FORM */}
-          {modoNovo && (
-            <div className={card()}>
-              <form action={criarPontoTuristico} className="grid gap-3">
-
-                <input name="nome" placeholder="Nome" required className="border p-3 rounded-xl" />
-                <input name="tipo" placeholder="Tipo (cachoeira, parque...)" className="border p-3 rounded-xl" />
-                <input name="endereco" placeholder="Endereço" className="border p-3 rounded-xl" />
-                <input name="localizacao_google" placeholder="Link Google Maps" className="border p-3 rounded-xl" />
-
-                <textarea name="descricao" placeholder="Descrição" className="border p-3 rounded-xl" />
-                <textarea name="observacoes" placeholder="Observações" className="border p-3 rounded-xl" />
-
-                <button className="bg-green-600 text-white p-3 rounded-xl">
-                  Salvar
-                </button>
-
-              </form>
-            </div>
-          )}
-
-          {/* LISTA */}
-          <div className={card()}>
-            <div className="space-y-3">
-
-              {pontos.map((p: any) => (
-                <div key={p.id} className="border p-4 rounded-xl bg-slate-50">
-
-                  <div className="flex justify-between">
-                    <div>
-                      <h3 className="font-bold">{p.nome}</h3>
-                      <p className="text-sm">{p.tipo}</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      {p.status === 'ativo' ? (
-                        <form action={inativarPonto}>
-                          <input type="hidden" name="id" value={p.id} />
-                          <button className="bg-red-600 text-white px-3 py-1 rounded">
-                            Inativar
-                          </button>
-                        </form>
-                      ) : (
-                        <form action={ativarPonto}>
-                          <input type="hidden" name="id" value={p.id} />
-                          <button className="bg-green-600 text-white px-3 py-1 rounded">
-                            Ativar
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  </div>
-
+      <ModuleCard>
+        <h2 className="text-xl font-bold text-slate-950">Lista de pontos</h2>
+        <div className="mt-5 space-y-3">
+          {pontos.map((p: any) => (
+            <div key={p.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-950">{p.nome}</h3>
+                  <p className="text-sm text-slate-600">{p.tipo || '-'}</p>
                 </div>
-              ))}
 
+                <div className="flex gap-2">
+                  {p.status === 'ativo' ? (
+                    <form action={inativarPonto}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <button className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">
+                        Inativar
+                      </button>
+                    </form>
+                  ) : (
+                    <form action={ativarPonto}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                        Ativar
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-
-        </section>
-      </div>
-    </main>
+          ))}
+        </div>
+      </ModuleCard>
+    </ModuleLayout>
   )
 }

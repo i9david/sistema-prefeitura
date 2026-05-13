@@ -1,12 +1,10 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { ShoppingCart } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCasaArtesaoNav } from '@/components/modulo-casa-artesao-nav'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import { registrarVenda } from './actions'
 
 type Produto = {
@@ -40,10 +38,6 @@ type VendaItem = {
   preco_unitario: number | null
   subtotal: number | null
   created_at: string
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarMoeda(valor: number | null | undefined) {
@@ -139,21 +133,16 @@ export default async function CasaArtesaoCaixaPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCasaArtesaoNav currentPath="/casa-artesao/caixa" />
+    <ModuleLayout sidebar={<ModuloCasaArtesaoNav currentPath="/casa-artesao/caixa" />}>
+      <ModuleHeader
+        title="Caixa"
+        description="Registre vendas com baixa automática no estoque e separação por artesão."
+        eyebrow="Operação"
+        icon={ShoppingCart}
+        accent="amber"
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Caixa
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Registre vendas com baixa automática no estoque e separação por artesão.
-            </p>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Nova venda
             </h2>
@@ -208,7 +197,7 @@ export default async function CasaArtesaoCaixaPage({
                             Artesão: {getNomeArtesao(produto.artesao_id)}
                           </p>
                           <p className="text-sm text-slate-600">
-                            {formatarMoeda(produto.preco)} • Estoque: {produto.quantidade ?? 0}
+                            {formatarMoeda(produto.preco)}  Estoque: {produto.quantidade ?? 0}
                           </p>
                         </div>
 
@@ -247,9 +236,9 @@ export default async function CasaArtesaoCaixaPage({
                 </button>
               </div>
             </form>
-          </div>
+          </ModuleCard>
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -294,7 +283,7 @@ export default async function CasaArtesaoCaixaPage({
                                 <span className="font-semibold text-slate-900">
                                   {getNomeProduto(item.produto_id)}
                                 </span>{' '}
-                                • {getNomeArtesao(item.artesao_id)} • Qtde: {item.quantidade} • Unitário: {formatarMoeda(item.preco_unitario)} • Subtotal: {formatarMoeda(item.subtotal)}
+                                 {getNomeArtesao(item.artesao_id)}  Qtde: {item.quantidade}  Unitário: {formatarMoeda(item.preco_unitario)}  Subtotal: {formatarMoeda(item.subtotal)}
                               </div>
                             ))}
                           </div>
@@ -309,9 +298,7 @@ export default async function CasaArtesaoCaixaPage({
                 Nenhuma venda registrada.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

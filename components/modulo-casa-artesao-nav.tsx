@@ -1,4 +1,5 @@
-import { ModuloNav } from '@/components/modulo-nav'
+import { ModuleSidebar } from '@/components/module/module-sidebar'
+import { getModuleConfig } from '@/config/modules'
 
 type ModuloCasaArtesaoNavProps = {
   currentPath?: string
@@ -7,21 +8,15 @@ type ModuloCasaArtesaoNavProps = {
 export function ModuloCasaArtesaoNav({
   currentPath = '',
 }: ModuloCasaArtesaoNavProps) {
+  const config = getModuleConfig('casa-artesao')
+
   return (
-    <ModuloNav
-      titulo="Casa do Artesão"
+    <ModuleSidebar
+      title={config.title}
       currentPath={currentPath}
-      cor="laranja"
-      itens={[
-        { label: 'Visão do módulo', href: '/casa-artesao' },
-        { label: 'Artesãos', href: '/casa-artesao/artesaos' },
-        { label: 'Produtos', href: '/casa-artesao/produtos' },
-        { label: 'Estoque', href: '/casa-artesao/estoque' },
-        { label: 'Caixa', href: '/casa-artesao/caixa' },
-        { label: 'Relatórios', href: '/casa-artesao/relatorios' },
-        { label: 'Fechamentos', href: '/casa-artesao/fechamentos' },
-        { label: 'Configurações', href: '/casa-artesao/configuracoes' },
-      ]}
+      groups={config.groups}
+      accent={config.accent}
+      context="Vendas e estoque"
     />
   )
 }

@@ -1,11 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 import { ModuloMuseuNav } from '@/components/modulo-museu-nav'
 import {
   ativarCategoriaMuseu,
@@ -326,7 +322,7 @@ export default async function MuseuCategoriasPage({
                                           {peca.nome}
                                         </p>
                                         <p className="text-xs text-slate-500">
-                                          Tombo: {peca.numero_tombo || '-'} • Status: {peca.status || '-'}
+                                          Tombo: {peca.numero_tombo || '-'}  Status: {peca.status || '-'}
                                         </p>
                                       </div>
 
@@ -415,7 +411,7 @@ export default async function MuseuCategoriasPage({
                           {peca.nome}
                         </p>
                         <p className="text-xs text-slate-500">
-                          Tombo: {peca.numero_tombo || '-'} • Status: {peca.status || '-'}
+                          Tombo: {peca.numero_tombo || '-'}  Status: {peca.status || '-'}
                         </p>
                       </div>
 

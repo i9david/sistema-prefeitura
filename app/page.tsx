@@ -1,28 +1,23 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import {
   Building2,
   Landmark,
   Palette,
   Music,
   Map,
+  BarChart3,
   ShieldCheck,
   ArrowRight,
   LogOut,
-  CheckCircle2,
-  Grid3X3,
   UserCircle,
   FolderKanban,
+  PackageSearch,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
-import { buscarModulosPermitidos } from '@/lib/menu'
+import { buscarContextoNavegacao } from '@/lib/menu'
 import { logout } from '@/app/logout/actions'
+import { getTenantPath } from '@/lib/tenant-paths-server'
 
 function pode(modulos: string[], modulo: string) {
   return modulos.includes(modulo)
@@ -42,7 +37,9 @@ export default async function HomePage() {
 
   if (!user) redirect('/login')
 
-  const modulosPermitidos = await buscarModulosPermitidos()
+  const contextoNavegacao = await buscarContextoNavegacao(user)
+  const modulosPermitidos = contextoNavegacao.modulosPermitidos
+  const podeGestaoExecutiva = contextoNavegacao.podeGestaoExecutiva
 
   const modulos = [
     {
@@ -51,7 +48,7 @@ export default async function HomePage() {
       href: '/centro-cultural',
       permissao: 'centro-cultural',
       icon: Building2,
-      cor: 'text-blue-700 bg-blue-50 border-blue-100',
+      cor: 'text-blue-700 bg-blue-50 ring-1 ring-blue-100',
     },
     {
       nome: 'Museu',
@@ -59,7 +56,7 @@ export default async function HomePage() {
       href: '/centro-cultural/museu',
       permissao: 'museu',
       icon: Landmark,
-      cor: 'text-violet-700 bg-violet-50 border-violet-100',
+      cor: 'text-violet-700 bg-violet-50 ring-1 ring-violet-100',
     },
     {
       nome: 'Casa do Artesão',
@@ -67,7 +64,7 @@ export default async function HomePage() {
       href: '/casa-artesao',
       permissao: 'casa-artesao',
       icon: Palette,
-      cor: 'text-amber-700 bg-amber-50 border-amber-100',
+      cor: 'text-amber-700 bg-amber-50 ring-1 ring-amber-100',
     },
     {
       nome: 'Banda Municipal',
@@ -75,7 +72,7 @@ export default async function HomePage() {
       href: '/banda-municipal',
       permissao: 'banda-municipal',
       icon: Music,
-      cor: 'text-rose-700 bg-rose-50 border-rose-100',
+      cor: 'text-rose-700 bg-rose-50 ring-1 ring-rose-100',
     },
     {
       nome: 'Turismo',
@@ -83,23 +80,32 @@ export default async function HomePage() {
       href: '/turismo',
       permissao: 'turismo',
       icon: Map,
-      cor: 'text-emerald-700 bg-emerald-50 border-emerald-100',
+      cor: 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-100',
     },
     {
-  nome: 'Projetos e Captação',
-  descricao: 'Carteira de projetos, análise técnica, fontes de recursos e oportunidades de captação.',
-  href: '/projetos-captacao',
-  permissao: 'projetos-captacao',
-  icon: FolderKanban,
-  cor: 'text-purple-700 bg-purple-50 border-purple-100',
-},
+      nome: 'Projetos e Captação',
+      descricao:
+        'Carteira de projetos, análise técnica, fontes de recursos e oportunidades de captação.',
+      href: '/projetos-captacao',
+      permissao: 'projetos-captacao',
+      icon: FolderKanban,
+      cor: 'text-purple-700 bg-purple-50 ring-1 ring-purple-100',
+    },
+    {
+      nome: 'Almoxarifado',
+      descricao: 'Categorias, produtos, estoque mínimo e movimentações de materiais.',
+      href: '/almoxarifado',
+      permissao: 'almoxarifado',
+      icon: PackageSearch,
+      cor: 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-100',
+    },
     {
       nome: 'Administrativo',
       descricao: 'Usuários, acessos, configurações e controle geral.',
       href: '/administrativo',
       permissao: 'administrativo',
       icon: ShieldCheck,
-      cor: 'text-slate-800 bg-slate-100 border-slate-200',
+      cor: 'text-slate-800 bg-slate-100 ring-1 ring-slate-200',
     },
   ]
 
@@ -108,14 +114,14 @@ export default async function HomePage() {
   )
 
   return (
-    <main className="min-h-screen bg-[#f4f6f8]">
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <main className="app-shell">
+      <div className="border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
               Prefeitura de Mineiros
             </p>
-            <h1 className="text-xl font-bold text-slate-900">
+            <h1 className="mt-1 text-xl font-bold text-slate-950">
               Secretaria de Cultura e Turismo
             </h1>
           </div>
@@ -123,7 +129,7 @@ export default async function HomePage() {
           <form action={logout}>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+              className="btn-danger"
             >
               <LogOut size={16} />
               Sair
@@ -132,70 +138,63 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 py-6">
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
-          <div className="border-b border-slate-200 bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900 px-7 py-7 text-white">
+      <div className="app-container">
+        <section className="ui-card-elevated overflow-hidden">
+          <div className="border-b border-slate-200 bg-slate-950 px-5 py-6 text-white sm:px-6">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-200">
                   Sistema de Gestão Institucional
                 </p>
 
-                <h2 className="mt-3 text-3xl font-bold tracking-tight">
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-white">
                   Painel Administrativo
                 </h2>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
                   Ambiente integrado para organização das ações, controle dos módulos,
                   acompanhamento administrativo e tomada de decisão da Secretaria.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur">
+              <div className="rounded-lg border border-white/10 bg-white/10 p-4">
                 <div className="flex items-center gap-3">
                   <UserCircle size={34} />
                   <div>
-                    <p className="text-xs text-blue-100">Usuário conectado</p>
-                    <p className="text-sm font-bold">{getNomeUsuario(user.email)}</p>
-                    <p className="text-xs text-blue-100">{user.email}</p>
+                    <p className="text-xs text-slate-300">Usuário conectado</p>
+                    <p className="text-sm font-bold">
+                      {getNomeUsuario(user.email)}
+                    </p>
+                    <p className="text-xs text-slate-300">{user.email}</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 p-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-600">
-                  Módulos liberados
-                </p>
-                <Grid3X3 size={20} className="text-blue-700" />
-              </div>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
+          <div className="grid gap-4 p-5 md:grid-cols-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-medium text-slate-600">
+                Módulos liberados
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-950">
                 {modulosVisiveis.length}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-600">
-                  Total de módulos
-                </p>
-                <ShieldCheck size={20} className="text-slate-700" />
-              </div>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-medium text-slate-600">
+                Total de módulos
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-950">
                 {modulos.length}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-emerald-700">
-                  Status do sistema
-                </p>
-                <CheckCircle2 size={20} className="text-emerald-700" />
-              </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+              <p className="text-sm font-medium text-emerald-700">
+                Status do sistema
+              </p>
               <p className="mt-2 text-3xl font-bold text-emerald-800">
                 Online
               </p>
@@ -203,68 +202,108 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">
-                Acesso aos módulos
+        {podeGestaoExecutiva && (
+          <section className="mt-6">
+            <div className="mb-5">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">
+                Gestão Executiva
               </p>
-              <h2 className="mt-2 text-2xl font-bold text-slate-900">
+              <h2 className="mt-1 text-xl font-bold text-slate-950">
+                Área estratégica
+              </h2>
+            </div>
+
+            <Link
+              href={getTenantPath('/dashboard')}
+              className="group block overflow-hidden rounded-lg border border-blue-200 bg-white shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-[var(--shadow-card)]"
+            >
+              <div className="grid gap-0 lg:grid-cols-[1fr_260px]">
+                <div className="p-6">
+                  <div className="flex items-start gap-4">
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+                      <BarChart3 size={24} aria-hidden="true" />
+                    </span>
+
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">
+                        Exclusivo para admin e gestor
+                      </p>
+                      <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+                        Dashboard Executivo
+                      </h3>
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                        Indicadores consolidados para acompanhamento institucional,
+                        prestação de contas e tomada de decisão da gestão pública.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-blue-700">
+                    Abrir painel estratégico
+                    <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
+                  </div>
+                </div>
+
+                <div className="border-t border-blue-100 bg-blue-50 p-6 lg:border-l lg:border-t-0">
+                  <p className="text-sm font-semibold text-blue-900">
+                    Área separada da operação diária para leitura executiva dos dados.
+                  </p>
+                  <p className="mt-3 text-xs leading-5 text-blue-700">
+                    Acesso liberado somente para perfis com responsabilidade de gestão.
+                  </p>
+                </div>
+              </div>
+            </Link>
+          </section>
+        )}
+
+        <section className="mt-6">
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                Áreas do sistema
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-slate-950">
                 Módulos disponíveis
               </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Selecione uma área para iniciar o atendimento, consulta ou gestão.
-              </p>
             </div>
           </div>
 
           {modulosVisiveis.length > 0 ? (
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {modulosVisiveis.map((modulo) => {
                 const Icon = modulo.icon
-
                 return (
                   <Link
                     key={modulo.href}
-                    href={modulo.href}
-                    className="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-blue-300 hover:bg-blue-50/40 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]"
+                    href={getTenantPath(modulo.href)}
+                    className="ui-card group block p-5 transition hover:border-blue-200 hover:shadow-[var(--shadow-card)]"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${modulo.cor}`}
-                      >
-                        <Icon size={22} />
-                      </div>
-
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition group-hover:bg-blue-700 group-hover:text-white">
-                        <ArrowRight size={17} />
-                      </div>
+                    <div className={`flex size-12 items-center justify-center rounded-lg ${modulo.cor}`}>
+                      <Icon size={24} />
                     </div>
 
-                    <h3 className="mt-4 text-lg font-bold text-slate-900">
+                    <h3 className="mt-4 text-lg font-bold text-slate-950">
                       {modulo.nome}
                     </h3>
-
-                    <p className="mt-2 min-h-[44px] text-sm leading-6 text-slate-600">
+                    <p className="mt-2 min-h-12 text-sm leading-6 text-slate-500">
                       {modulo.descricao}
                     </p>
+
+                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-blue-700">
+                      Acessar
+                      <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
+                    </div>
                   </Link>
                 )
               })}
             </div>
           ) : (
-            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
-              <h3 className="font-bold">Nenhum módulo liberado</h3>
-              <p className="mt-1 text-sm">
-                Seu usuário ainda não possui permissões cadastradas. Solicite liberação ao administrador.
-              </p>
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm font-medium text-slate-500">
+              Nenhum módulo liberado
             </div>
           )}
         </section>
-
-        <footer className="py-5 text-center text-xs text-slate-500">
-          Sistema de Gestão Institucional • Secretaria Municipal de Cultura e Turismo
-        </footer>
       </div>
     </main>
   )

@@ -1,78 +1,131 @@
+import Link from 'next/link'
+import {
+  BarChart3,
+  Calendar,
+  ClipboardCheck,
+  LayoutDashboard,
+  Mic,
+  Music,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import { ModuleAreaCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
+import { ModuleSectionGrid } from '@/components/module/module-grid'
 import { ModuloBandaMunicipalNav } from '@/components/modulo-banda-municipal-nav'
+import { getTenantPath } from '@/lib/tenant-paths-server'
 
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-8 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
+type AreaModulo = {
+  titulo: string
+  descricao: string
+  href: string
+  icon: LucideIcon
 }
+
+type GrupoArea = {
+  titulo: string
+  descricao: string
+  areas: AreaModulo[]
+}
+
+const grupos: GrupoArea[] = [
+  {
+    titulo: 'Cadastros',
+    descricao: 'Base administrativa da Banda Municipal.',
+    areas: [
+      {
+        titulo: 'Músicos',
+        descricao: 'Cadastro e acompanhamento dos integrantes da banda.',
+        href: '/banda-municipal/musicos',
+        icon: Users,
+      },
+      {
+        titulo: 'Instrumentos',
+        descricao: 'Controle de patrimônio, disponibilidade e situação de uso.',
+        href: '/banda-municipal/instrumentos',
+        icon: Music,
+      },
+    ],
+  },
+  {
+    titulo: 'Operação',
+    descricao: 'Rotina de ensaios, apresentações e chamadas oficiais.',
+    areas: [
+      {
+        titulo: 'Ensaios',
+        descricao: 'Agenda e acompanhamento dos ensaios da Banda Municipal.',
+        href: '/banda-municipal/ensaios',
+        icon: Calendar,
+      },
+      {
+        titulo: 'Apresentações',
+        descricao: 'Registro das apresentações, locais e compromissos públicos.',
+        href: '/banda-municipal/apresentacoes',
+        icon: Mic,
+      },
+      {
+        titulo: 'Presenças',
+        descricao: 'Chamada rápida de músicos em ensaios e apresentações.',
+        href: '/banda-municipal/presencas',
+        icon: ClipboardCheck,
+      },
+    ],
+  },
+  {
+    titulo: 'Relatórios',
+    descricao: 'Leituras consolidadas para gestão e prestação de contas.',
+    areas: [
+      {
+        titulo: 'Relatórios',
+        descricao: 'Visão consolidada de músicos, instrumentos e agenda.',
+        href: '/banda-municipal/relatorios',
+        icon: BarChart3,
+      },
+    ],
+  },
+]
 
 export default function BandaMunicipalPage() {
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloBandaMunicipalNav currentPath="/banda-municipal" />
+    <ModuleLayout sidebar={<ModuloBandaMunicipalNav currentPath="/banda-municipal" />}>
+      <ModuleHeader
+        title="Banda Municipal"
+        eyebrow="Gestão"
+        description="Organize músicos, instrumentos, ensaios, apresentações, presenças e relatórios em uma visão única para apoiar a rotina cultural do município."
+        icon={LayoutDashboard}
+        accent="violet"
+        context="Operação musical"
+        action={
+          <Link
+            href={getTenantPath('/banda-municipal/ensaios')}
+            className="btn-primary w-full justify-center md:w-auto"
+          >
+            <Calendar size={16} aria-hidden="true" />
+            Abrir ensaios
+          </Link>
+        }
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Banda Municipal
-            </h1>
-            <p className="mt-3 text-slate-600">
-              Gestão de músicos, instrumentos, ensaios, apresentações e relatórios.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <a
-              href="/banda-municipal/musicos"
-              className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5"
-            >
-              <h2 className="text-lg font-bold text-slate-900">Músicos</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Cadastro e acompanhamento dos integrantes.
-              </p>
-            </a>
-
-            <a
-              href="/banda-municipal/instrumentos"
-              className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5"
-            >
-              <h2 className="text-lg font-bold text-slate-900">Instrumentos</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Controle de instrumentos e situação de uso.
-              </p>
-            </a>
-
-            <a
-              href="/banda-municipal/ensaios"
-              className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5"
-            >
-              <h2 className="text-lg font-bold text-slate-900">Ensaios</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Agenda e controle dos ensaios da Banda Municipal.
-              </p>
-            </a>
-
-            <a
-              href="/banda-municipal/apresentacoes"
-              className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5"
-            >
-              <h2 className="text-lg font-bold text-slate-900">Apresentações</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Registro e acompanhamento de apresentações oficiais.
-              </p>
-            </a>
-
-            <a
-              href="/banda-municipal/relatorios"
-              className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5"
-            >
-              <h2 className="text-lg font-bold text-slate-900">Relatórios</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Visão consolidada do módulo da Banda Municipal.
-              </p>
-            </a>
-          </div>
-        </section>
-      </div>
-    </main>
+      {grupos.map((grupo) => (
+        <ModuleSectionGrid
+          key={grupo.titulo}
+          title={grupo.titulo}
+          description={grupo.descricao}
+          columns={3}
+        >
+          {grupo.areas.map((area) => (
+            <ModuleAreaCard
+              key={area.href}
+              title={area.titulo}
+              description={area.descricao}
+              href={area.href}
+              icon={area.icon}
+              accent="violet"
+            />
+          ))}
+        </ModuleSectionGrid>
+      ))}
+    </ModuleLayout>
   )
 }

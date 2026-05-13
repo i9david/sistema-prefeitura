@@ -1,11 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
 import { exigirPermissaoPagina } from '@/lib/seguranca-paginas'
 import { registrarPresencaBiometria } from './actions'

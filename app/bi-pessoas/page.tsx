@@ -1,11 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 
 type Pessoa = {
   id: string
@@ -19,9 +15,29 @@ type Aluno = {
   id: string
   pessoa_id: string | null
   nome: string
-  aula_nome: string | null
-  modalidade: string | null
   status: string
+  aluno_matriculas: Matricula[] | null
+}
+
+type Relacao<T> = T | T[] | null
+
+type Modalidade = {
+  id: string
+  nome: string
+}
+
+type Aula = {
+  id: string
+  nome: string
+  modalidades: Relacao<Modalidade>
+}
+
+type Matricula = {
+  id: string
+  status: string
+  data_inicio: string | null
+  data_fim: string | null
+  aulas: Relacao<Aula>
 }
 
 type Visitante = {
@@ -72,6 +88,37 @@ function percent(valor: number, total: number) {
   return Math.round((valor / total) * 100)
 }
 
+function normalizarRelacao<T>(relacao: Relacao<T>) {
+  if (Array.isArray(relacao)) return relacao[0] ?? null
+  return relacao ?? null
+}
+
+function getAula(matricula: Matricula) {
+  return normalizarRelacao(matricula.aulas)
+}
+
+function getModalidade(aula: Aula | null) {
+  return normalizarRelacao(aula?.modalidades ?? null)
+}
+
+function formatarMatriculas(aluno: Aluno) {
+  const matriculas = aluno.aluno_matriculas ?? []
+
+  if (matriculas.length === 0) {
+    return aluno.status === 'ativo' ? 'Vinculado' : `Vinculado • ${aluno.status}`
+  }
+
+  return matriculas
+    .map((matricula) => {
+      const aula = getAula(matricula)
+      const modalidade = getModalidade(aula)
+      const turma = aula?.nome ?? 'Turma não informada'
+      const nomeModalidade = modalidade?.nome ?? 'Modalidade não informada'
+      return `${turma} • ${nomeModalidade} • ${matricula.status}`
+    })
+    .join('; ')
+}
+
 export default async function BIPessoasPage({
   searchParams,
 }: {
@@ -106,7 +153,26 @@ export default async function BIPessoasPage({
 
     supabase
       .from('alunos')
-      .select('id, pessoa_id, nome, aula_nome, modalidade, status')
+      .select(`
+        id,
+        pessoa_id,
+        nome,
+        status,
+        aluno_matriculas (
+          id,
+          status,
+          data_inicio,
+          data_fim,
+          aulas:aula_id!aluno_matriculas_aula_id_fkey (
+            id,
+            nome,
+            modalidades!aulas_modalidade_id_fkey (
+              id,
+              nome
+            )
+          )
+        )
+      `)
       .order('nome', { ascending: true }),
 
     supabase
@@ -235,7 +301,7 @@ export default async function BIPessoasPage({
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <<Sidebar currentPath="/" /> />
+        <Sidebar currentPath="/" />
 
         <section className="space-y-6">
           <div className={cardClassName()}>
@@ -499,7 +565,7 @@ export default async function BIPessoasPage({
                             {item.aluno && (
                               <p>
                                 <span className="font-semibold">Centro Cultural:</span>{' '}
-                                {item.aluno.aula_nome || item.aluno.modalidade || 'Vinculado'}
+                                {formatarMatriculas(item.aluno)}
                               </p>
                             )}
                             {item.visitante && (

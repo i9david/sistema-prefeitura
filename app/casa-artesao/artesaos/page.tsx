@@ -1,12 +1,10 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { Plus, Users } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCasaArtesaoNav } from '@/components/modulo-casa-artesao-nav'
+import { ModuleCard } from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import {
   ativarArtesao,
   atualizarArtesao,
@@ -23,10 +21,6 @@ type Artesao = {
   observacoes: string | null
   status: string
   created_at: string
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarTelefone(valor: string | null | undefined) {
@@ -97,35 +91,28 @@ export default async function CasaArtesaoArtesaosPage({
   const mostrarFormulario = modoNovo || !!artesaoEditando
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCasaArtesaoNav currentPath="/casa-artesao/artesaos" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Artesãos
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Cadastro e gestão dos artesãos vinculados à Casa do Artesão.
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/casa-artesao/artesaos?novo=1"
-                  className="inline-flex rounded-2xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700"
-                >
-                  Novo artesão
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloCasaArtesaoNav currentPath="/casa-artesao/artesaos" />}>
+      <ModuleHeader
+        title="Artesãos"
+        description="Cadastro e gestão dos artesãos vinculados à Casa do Artesão."
+        eyebrow="Cadastros"
+        icon={Users}
+        accent="amber"
+        action={
+          !mostrarFormulario && (
+            <a
+              href="/casa-artesao/artesaos?novo=1"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Novo artesão
+            </a>
+          )
+        }
+      />
 
           {mostrarFormulario && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-slate-900">
                   {artesaoEditando ? 'Editar artesão' : 'Novo artesão'}
@@ -222,10 +209,10 @@ export default async function CasaArtesaoArtesaosPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -359,9 +346,7 @@ export default async function CasaArtesaoArtesaosPage({
                 Nenhum artesão encontrado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

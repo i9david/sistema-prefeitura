@@ -1,13 +1,18 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
 import { exigirPermissaoPagina } from '@/lib/seguranca-paginas'
+import { PageEmptyState, PageFilters, PageList, PageShell } from '@/components/page-shell'
+import {
+  FormActions,
+  FormField,
+  FormMessage,
+  SelectInput,
+  TextAreaInput,
+  TextInput,
+} from '@/components/form'
 import {
   ativarModalidade,
   atualizarModalidade,
@@ -34,7 +39,7 @@ function getProfessorNome(professores: ProfessorRelacionado) {
 }
 
 function cardClassName() {
-  return 'rounded-3xl border border-slate-200/80 bg-white/95 p-7 shadow-[0_10px_30px_rgba(15,23,42,0.08)]'
+  return 'ui-card p-5'
 }
 
 export default async function ModalidadesPage({
@@ -83,7 +88,7 @@ export default async function ModalidadesPage({
       id,
       modalidade_id,
       funcao,
-      professores:professor_id ( id, nome )
+      professores:professor_id!modalidade_professores_professor_id_fkey ( id, nome )
     `)
 
   if (erroVinculos) {
@@ -112,32 +117,16 @@ export default async function ModalidadesPage({
   }
 
   return (
-    <main className="min-h-screen p-6 bg-slate-50">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCentroCulturalNav currentPath="/modalidades" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Modalidades
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Cadastre e organize todas as modalidades do Centro Cultural
-                </p>
-              </div>
-
-              {!mostrarFormulario && (
-                <a
-                  href="/modalidades?novo=1"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:scale-[1.02] hover:from-blue-700 hover:to-indigo-700"
-                >
-                  ➕ Nova modalidade
-                </a>
-              )}
-            </div>
-          </div>
+    <PageShell
+      nav={<ModuloCentroCulturalNav currentPath="/modalidades" />}
+      title="Modalidades"
+      subtitle="Cadastre e organize todas as modalidades do Centro Cultural."
+      primaryAction={
+        !mostrarFormulario
+          ? { label: 'Nova modalidade', href: '/modalidades?novo=1' }
+          : null
+      }
+    >
 
           {mostrarFormulario && (
             <div className={cardClassName()}>
@@ -148,7 +137,7 @@ export default async function ModalidadesPage({
 
                 <a
                   href="/modalidades"
-                  className="rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  className="btn-secondary"
                 >
                   Voltar para lista
                 </a>
@@ -162,96 +151,88 @@ export default async function ModalidadesPage({
                   <input type="hidden" name="id" value={modalidadeEditando.id} />
                 )}
 
-                <input
-                  name="nome"
-                  placeholder="Nome da modalidade"
-                  required
-                  defaultValue={modalidadeEditando?.nome ?? ''}
-                  className="w-full rounded-2xl border px-4 py-3"
-                />
+                <FormField label="Nome da modalidade">
+                  <TextInput
+                    name="nome"
+                    placeholder="Ex: Ballet, violão, teatro"
+                    required
+                    defaultValue={modalidadeEditando?.nome ?? ''}
+                  />
+                </FormField>
 
-                <textarea
-                  name="descricao"
-                  placeholder="Descrição"
-                  defaultValue={modalidadeEditando?.descricao ?? ''}
-                  className="min-h-28 w-full rounded-2xl border px-4 py-3"
-                />
+                <FormField label="Descrição" hint="Use uma descrição curta para orientar equipe e relatórios.">
+                  <TextAreaInput
+                    name="descricao"
+                    placeholder="Descreva a modalidade"
+                    defaultValue={modalidadeEditando?.descricao ?? ''}
+                  />
+                </FormField>
 
-                <select
-                  name="status"
-                  required
-                  className="w-full rounded-2xl border px-4 py-3"
-                  defaultValue={modalidadeEditando?.status ?? ''}
-                >
-                  <option value="" disabled>
-                    Selecione o status
-                  </option>
-                  <option value="ativa">Ativa</option>
-                  <option value="inativa">Inativa</option>
-                </select>
+                <FormField label="Status">
+                  <SelectInput
+                    name="status"
+                    required
+                    defaultValue={modalidadeEditando?.status ?? ''}
+                  >
+                    <option value="" disabled>
+                      Selecione o status
+                    </option>
+                    <option value="ativa">Ativa</option>
+                    <option value="inativa">Inativa</option>
+                  </SelectInput>
+                </FormField>
 
-                {params.message && (
-                  <p className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                    {params.message}
-                  </p>
-                )}
+                <FormMessage>{params.message}</FormMessage>
 
-                <div className="flex gap-3">
+                <FormActions>
                   <button
                     type="submit"
-                    className="rounded-2xl bg-slate-900 px-6 py-3 text-white"
+                    className="btn-primary"
                   >
                     {modalidadeEditando ? 'Atualizar modalidade' : 'Salvar modalidade'}
                   </button>
 
                   <a
                     href="/modalidades"
-                    className="rounded-2xl border border-slate-300 px-6 py-3 text-slate-700"
+                    className="btn-secondary"
                   >
                     Cancelar
                   </a>
-                </div>
+                </FormActions>
               </form>
             </div>
           )}
 
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Lista de modalidades
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Busque, edite, ative e inative modalidades
-                </p>
-              </div>
-
+          <PageFilters>
               <form method="get" className="flex w-full max-w-md gap-2">
-                <input
+                <TextInput
                   type="text"
                   name="busca"
                   placeholder="Buscar por nome"
                   defaultValue={busca}
-                  className="w-full rounded-2xl border px-4 py-3"
                 />
                 <button
                   type="submit"
-                  className="rounded-2xl bg-slate-900 px-5 py-3 text-white"
+                  className="btn-primary"
                 >
                   Buscar
                 </button>
               </form>
-            </div>
 
             {params.message && !mostrarFormulario && (
-              <p className="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                {params.message}
-              </p>
+              <div className="mt-4">
+                <FormMessage>{params.message}</FormMessage>
+              </div>
             )}
+          </PageFilters>
 
+          <PageList
+            title="Lista de modalidades"
+            subtitle="Busque, edite, ative e inative modalidades."
+          >
             {modalidades && modalidades.length > 0 ? (
-              <div className="mt-6 overflow-x-auto">
-                <table className="min-w-full border-collapse text-sm">
+              <div className="overflow-x-auto">
+                <table>
                   <thead>
                     <tr className="border-b bg-slate-50">
                       <th className="px-4 py-3 text-left">Nome</th>
@@ -311,7 +292,7 @@ export default async function ModalidadesPage({
                                 href={`/modalidades?editar=${modalidade.id}${
                                   busca ? `&busca=${encodeURIComponent(busca)}` : ''
                                 }`}
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-center text-slate-700"
+                                className="btn-secondary py-2"
                               >
                                 Editar
                               </a>
@@ -321,7 +302,7 @@ export default async function ModalidadesPage({
                                   <input type="hidden" name="id" value={modalidade.id} />
                                   <button
                                     type="submit"
-                                    className="w-full rounded-lg bg-red-600 px-3 py-2 text-white"
+                                    className="btn-danger w-full py-2"
                                   >
                                     Inativar
                                   </button>
@@ -331,7 +312,7 @@ export default async function ModalidadesPage({
                                   <input type="hidden" name="id" value={modalidade.id} />
                                   <button
                                     type="submit"
-                                    className="w-full rounded-lg bg-green-600 px-3 py-2 text-white"
+                                    className="w-full rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white"
                                   >
                                     Ativar
                                   </button>
@@ -346,13 +327,11 @@ export default async function ModalidadesPage({
                 </table>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-slate-600">
+              <PageEmptyState>
                 Nenhuma modalidade encontrada.
-              </p>
+              </PageEmptyState>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </PageList>
+    </PageShell>
   )
 }

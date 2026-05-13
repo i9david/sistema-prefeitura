@@ -1,11 +1,6 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 import { getContextoPermissoes } from '@/lib/get-permissoes'
 import { RelatoriosFiltros } from '@/components/relatorios-filtros'
 
@@ -26,13 +21,27 @@ type Aula = {
   id: string
   nome: string
   modalidade_id: string
-  professor_id: string | null
+  aula_professores: AulaProfessor[] | null
+}
+
+type AulaProfessor = {
+  professor_id: string
 }
 
 type Aluno = {
   id: string
   nome: string
   aula_id: string
+}
+
+type AlunoRelacionado = {
+  id: string
+  nome: string
+}
+
+type MatriculaAluno = {
+  aula_id: string
+  alunos: AlunoRelacionado | AlunoRelacionado[] | null
 }
 
 type RegistroFrequencia = {
@@ -100,7 +109,7 @@ export default async function RelatoriosPage({
   const contexto = await getContextoPermissoes()
 
   if (!contexto.authUser) redirect('/login')
-  if (!contexto.usuarioInterno) redirect('/dashboard')
+  if (!contexto.usuarioInterno) redirect('/sem-permissao')
 
   const usuarioInterno = contexto.usuarioInterno
 
@@ -116,7 +125,14 @@ export default async function RelatoriosPage({
 
   const { data: aulasData, error: aulasError } = await supabase
     .from('aulas')
-    .select('id, nome, modalidade_id, professor_id')
+    .select(`
+      id,
+      nome,
+      modalidade_id,
+      aula_professores!aula_professores_aula_id_fkey (
+        professor_id
+      )
+    `)
     .eq('status', 'ativa')
     .order('nome', { ascending: true })
 
@@ -129,7 +145,10 @@ export default async function RelatoriosPage({
 
   if (usuarioInterno.professor_id) {
     aulas = aulas.filter(
-      (aula) => aula.professor_id === usuarioInterno.professor_id
+      (aula) =>
+        aula.aula_professores?.some(
+          (vinculo) => vinculo.professor_id === usuarioInterno.professor_id
+        )
     )
   }
 
@@ -141,20 +160,58 @@ export default async function RelatoriosPage({
     modalidadesPermitidasIds.includes(modalidade.id)
   )
 
-  const { data: alunosBase, error: alunosError } = await supabase
-    .from('alunos')
-    .select('id, nome, aula_id')
-    .eq('status', 'ativo')
-    .order('nome', { ascending: true })
+  const aulaIdsPermitidos = aulas.map((aula) => aula.id)
 
-  if (alunosError) {
-    redirect(`/relatorios?message=${encodeURIComponent(alunosError.message)}`)
+  const { data: matriculasBase, error: matriculasError } =
+    aulaIdsPermitidos.length > 0
+      ? await supabase
+          .from('aluno_matriculas')
+          .select(`
+            aula_id,
+            alunos:aluno_id!aluno_matriculas_aluno_id_fkey (
+              id,
+              nome
+            )
+          `)
+          .eq('status', 'ativo')
+          .in('aula_id', aulaIdsPermitidos)
+      : { data: [], error: null }
+
+  if (matriculasError) {
+    redirect(`/relatorios?message=${encodeURIComponent(matriculasError.message)}`)
   }
 
-  let alunos = (alunosBase ?? []) as Aluno[]
+  let alunos = ((matriculasBase ?? []) as MatriculaAluno[])
+    .map((matricula) => {
+      if (!matricula.alunos) return null
+      const aluno = Array.isArray(matricula.alunos)
+        ? matricula.alunos[0] ?? null
+        : matricula.alunos
 
-  const aulaIdsPermitidos = aulas.map((aula) => aula.id)
-  alunos = alunos.filter((aluno) => aulaIdsPermitidos.includes(aluno.aula_id))
+      if (!aluno) return null
+
+      return {
+        id: aluno.id,
+        nome: aluno.nome,
+        aula_id: matricula.aula_id,
+      }
+    })
+    .filter((aluno): aluno is Aluno => Boolean(aluno))
+
+  if (alunos.length === 0 && aulaIdsPermitidos.length > 0) {
+    const { data: alunosBase, error: alunosError } = await supabase
+      .from('alunos')
+      .select('id, nome, aula_id')
+      .eq('status', 'ativo')
+      .in('aula_id', aulaIdsPermitidos)
+      .order('nome', { ascending: true })
+
+    if (alunosError) {
+      redirect(`/relatorios?message=${encodeURIComponent(alunosError.message)}`)
+    }
+
+    alunos = (alunosBase ?? []) as Aluno[]
+  }
 
   let query = supabase.from('frequencias').select(`
       id,
@@ -162,9 +219,15 @@ export default async function RelatoriosPage({
       aula_id,
       status,
       data_aula,
-      alunos ( nome ),
-      aulas ( nome )
+      alunos!frequencias_aluno_id_fkey ( nome ),
+      aulas!frequencias_aula_id_fkey ( nome )
     `)
+
+  if (aulaIdsPermitidos.length === 0) {
+    query = query.eq('aula_id', '00000000-0000-0000-0000-000000000000')
+  } else {
+    query = query.in('aula_id', aulaIdsPermitidos)
+  }
 
   if (aulaId) query = query.eq('aula_id', aulaId)
   if (alunoId) query = query.eq('aluno_id', alunoId)
@@ -194,7 +257,7 @@ export default async function RelatoriosPage({
   return (
     <main className="min-h-screen p-6 bg-slate-50">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_1fr]">
-        <<Sidebar currentPath="/" /> currentPath="/relatorios" />
+        <Sidebar currentPath="/relatorios" />
 
         <section className="space-y-6">
           <div className={cardClassName()}>

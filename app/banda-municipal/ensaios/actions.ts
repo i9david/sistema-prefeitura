@@ -1,13 +1,11 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+
+function horarioFimValido(horarioInicio: string, horarioFim: string) {
+  return !horarioFim || horarioInicio < horarioFim
+}
 
 export async function criarEnsaio(formData: FormData) {
   const supabase = await createClient()
@@ -31,6 +29,10 @@ export async function criarEnsaio(formData: FormData) {
 
   if (!horarioInicio) {
     redirect('/banda-municipal/ensaios?message=Informe o horário de início')
+  }
+
+  if (!horarioFimValido(horarioInicio, horarioFim)) {
+    redirect('/banda-municipal/ensaios?message=Horário de fim deve ser maior que horário de início')
   }
 
   const { error } = await supabase.from('banda_municipal_ensaios').insert({
@@ -78,6 +80,10 @@ export async function atualizarEnsaio(formData: FormData) {
 
   if (!horarioInicio) {
     redirect('/banda-municipal/ensaios?message=Informe o horário de início')
+  }
+
+  if (!horarioFimValido(horarioInicio, horarioFim)) {
+    redirect('/banda-municipal/ensaios?message=Horário de fim deve ser maior que horário de início')
   }
 
   const { error } = await supabase
@@ -135,7 +141,7 @@ export async function salvarPresencasEnsaio(formData: FormData) {
           observacoes: observacoes || null,
         },
         {
-          onConflict: 'ensaio_id,musico_id',
+          onConflict: 'municipio_id,ensaio_id,musico_id',
         }
       )
 

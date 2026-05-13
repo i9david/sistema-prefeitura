@@ -1,12 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from "@/components/sidebar"
 
 function competenciaFromData(data: string) {
@@ -80,7 +76,7 @@ export async function gerarFechamentoMensal(formData: FormData) {
         observacoes: observacoes || null,
       },
       {
-        onConflict: 'artesao_id,competencia',
+        onConflict: 'municipio_id,artesao_id,competencia',
       }
     )
 

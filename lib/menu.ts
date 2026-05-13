@@ -1,4 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import type { User } from '@supabase/supabase-js'
+import { cache } from 'react'
+import { getModulosAtivosMunicipioAtual } from '@/lib/saas'
+import { createTenantClient as createClient, getMunicipioId } from '@/lib/supabase/tenant-server'
+import { usuarioPodeAcessarGestaoExecutiva } from '@/lib/gestao-executiva'
+import { getUsuarioAdministrativoAtual } from '@/lib/usuario-atual'
 
 const todosModulos = [
   'centro-cultural',
@@ -8,63 +13,62 @@ const todosModulos = [
   'turismo',
   'administrativo',
   'projetos-captacao',
+  'almoxarifado',
 ]
 
-export async function buscarModulosPermitidos() {
+export type ContextoNavegacao = {
+  modulosPermitidos: string[]
+  podeGestaoExecutiva: boolean
+  usuario: Awaited<ReturnType<typeof getUsuarioAdministrativoAtual>>
+}
+
+async function carregarContextoNavegacao(
+  authUser?: User | null
+): Promise<ContextoNavegacao> {
   const supabase = await createClient()
+  const municipioId = getMunicipioId()
+  const modulosAtivos = await getModulosAtivosMunicipioAtual(todosModulos)
+  const usuario = await getUsuarioAdministrativoAtual(authUser)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user?.email) return []
-
-  let { data: usuario } = await supabase
-    .from('administrativo_usuarios')
-    .select('id, nome, email, perfil, status')
-    .eq('email', user.email)
-    .maybeSingle()
-
-  // Cria automaticamente se não existir
-  if (!usuario) {
-    const nome =
-      user.user_metadata?.name ||
-      user.user_metadata?.full_name ||
-      user.email.split('@')[0]
-
-    const { data: novoUsuario } = await supabase
-      .from('administrativo_usuarios')
-      .insert({
-        nome,
-        email: user.email,
-        perfil: 'usuario',
-        status: 'ativo',
-      })
-      .select('id, nome, email, perfil, status')
-      .single()
-
-    usuario = novoUsuario
+  if (!usuario || usuario.status !== 'ativo') {
+    return {
+      modulosPermitidos: [],
+      podeGestaoExecutiva: false,
+      usuario,
+    }
   }
 
-  // Se inativo, não acessa nada
-  if (!usuario || usuario.status !== 'ativo') return []
-
-  // Admin vê tudo
   if (usuario.perfil === 'admin') {
-    return todosModulos
+    return {
+      modulosPermitidos: todosModulos.filter((modulo) => modulosAtivos.includes(modulo)),
+      podeGestaoExecutiva: true,
+      usuario,
+    }
   }
 
-  // Busca acessos
   const { data: acessos } = await supabase
     .from('administrativo_acessos')
     .select('modulo')
     .eq('usuario_id', usuario.id)
+    .eq('municipio_id', municipioId)
     .eq('pode_visualizar', true)
 
-  return (
+  const modulosPermitidos =
     acessos
       ?.map((item) => item.modulo)
       .filter((modulo): modulo is string => Boolean(modulo))
       .filter((modulo) => todosModulos.includes(modulo)) || []
-  )
+
+  return {
+    modulosPermitidos: modulosPermitidos.filter((modulo) => modulosAtivos.includes(modulo)),
+    podeGestaoExecutiva: usuarioPodeAcessarGestaoExecutiva(usuario),
+    usuario,
+  }
 }
+
+export async function buscarModulosPermitidos(authUser?: User | null) {
+  const contexto = await buscarContextoNavegacao(authUser)
+  return contexto.modulosPermitidos
+}
+
+export const buscarContextoNavegacao = cache(carregarContextoNavegacao)

@@ -1,15 +1,15 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
+import { exigirPermissaoAction } from '@/lib/seguranca-actions'
 
 export async function vincularProfessorNaModalidade(formData: FormData) {
+  const { supabase } = await exigirPermissaoAction(
+    'Centro Cultural',
+    'Professores x Modalidades',
+    'criar'
+  )
+
   const modalidadeId = String(formData.get('modalidade_id') ?? '').trim()
   const professorId = String(formData.get('professor_id') ?? '').trim()
   const funcao = String(formData.get('funcao') ?? '').trim()
@@ -17,8 +17,6 @@ export async function vincularProfessorNaModalidade(formData: FormData) {
   if (!modalidadeId || !professorId || !funcao) {
     redirect('/modalidade-professores?message=Preencha todos os campos obrigatórios')
   }
-
-  const supabase = await createClient()
 
   const { data: existente } = await supabase
     .from('modalidade_professores')
@@ -45,6 +43,12 @@ export async function vincularProfessorNaModalidade(formData: FormData) {
 }
 
 export async function atualizarVinculoProfessorModalidade(formData: FormData) {
+  const { supabase } = await exigirPermissaoAction(
+    'Centro Cultural',
+    'Professores x Modalidades',
+    'editar'
+  )
+
   const id = String(formData.get('id') ?? '').trim()
   const modalidadeId = String(formData.get('modalidade_id') ?? '').trim()
   const professorId = String(formData.get('professor_id') ?? '').trim()
@@ -53,8 +57,6 @@ export async function atualizarVinculoProfessorModalidade(formData: FormData) {
   if (!id || !modalidadeId || !professorId || !funcao) {
     redirect('/modalidade-professores?message=Preencha todos os campos obrigatórios')
   }
-
-  const supabase = await createClient()
 
   const { error } = await supabase
     .from('modalidade_professores')
@@ -73,13 +75,17 @@ export async function atualizarVinculoProfessorModalidade(formData: FormData) {
 }
 
 export async function excluirVinculoProfessorModalidade(formData: FormData) {
+  const { supabase } = await exigirPermissaoAction(
+    'Centro Cultural',
+    'Professores x Modalidades',
+    'excluir'
+  )
+
   const id = String(formData.get('id') ?? '').trim()
 
   if (!id) {
     redirect('/modalidade-professores?message=Vínculo não encontrado')
   }
-
-  const supabase = await createClient()
 
   const { error } = await supabase
     .from('modalidade_professores')

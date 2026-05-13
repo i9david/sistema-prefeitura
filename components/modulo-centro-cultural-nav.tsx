@@ -1,4 +1,5 @@
-import { ModuloNav } from '@/components/modulo-nav'
+import { ModuleSidebar } from '@/components/module/module-sidebar'
+import { getModuleConfig } from '@/config/modules'
 
 type ModuloCentroCulturalNavProps = {
   currentPath?: string
@@ -7,26 +8,15 @@ type ModuloCentroCulturalNavProps = {
 export function ModuloCentroCulturalNav({
   currentPath = '',
 }: ModuloCentroCulturalNavProps) {
+  const config = getModuleConfig('centro-cultural')
+
   return (
-    <ModuloNav
-      titulo="Centro Cultural"
+    <ModuleSidebar
+      title={config.title}
       currentPath={currentPath}
-      cor="azul"
-      itens={[
-        { label: 'Visão do módulo', href: '/centro-cultural' },
-        { label: 'Alunos', href: '/alunos' },
-        { label: 'Modalidades', href: '/modalidades' },
-        { label: 'Aulas', href: '/aulas' },
-        { label: 'Professores', href: '/professores' },
-        { label: 'Professores x Aulas', href: '/aula-professores' },
-        { label: 'Professores x Modalidades', href: '/modalidade-professores' },
-        { label: 'Frequência', href: '/frequencia' },
-        { label: 'Terminal de presença', href: '/frequencia-biometria' },
-        { label: 'Visitantes', href: '/visitantes' },
-        { label: 'Relatório de visitantes', href: '/visitantes/relatorios' },
-        { label: 'Comunicação', href: '/contatos' },
-        { label: 'Museu', href: '/centro-cultural/museu' },
-      ]}
+      groups={config.groups}
+      accent={config.accent}
+      context="Gestão cultural"
     />
   )
 }

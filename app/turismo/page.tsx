@@ -1,20 +1,43 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import {
+  BarChart3,
+  ClipboardList,
+  LayoutDashboard,
+  MapPin,
+  TrendingUp,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import {
+  ModuleAreaCard,
+  ModuleMetricCard,
+} from '@/components/module/module-card'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
+import { ModuleGrid, ModuleSectionGrid } from '@/components/module/module-grid'
 import { ModuloTurismoNav } from '@/components/modulo-turismo-nav'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { getTenantPath } from '@/lib/tenant-paths-server'
 
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
+type Indicador = {
+  label: string
+  valor: number
+  descricao: string
+  icon: LucideIcon
 }
 
-function moduloCardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5'
+type AreaModulo = {
+  titulo: string
+  descricao: string
+  href: string
+  icon: LucideIcon
+}
+
+type GrupoArea = {
+  titulo: string
+  descricao: string
+  areas: AreaModulo[]
 }
 
 export default async function TurismoPage() {
@@ -53,119 +76,142 @@ export default async function TurismoPage() {
 
   const visitantesHoje = visitantes.filter((item) => item.data_visita === hoje).length
 
+  const indicadores: Indicador[] = [
+    {
+      label: 'Pontos cadastrados',
+      valor: pontos.length,
+      descricao: `${pontosAtivos} ativos`,
+      icon: MapPin,
+    },
+    {
+      label: 'Demandas pendentes',
+      valor: demandasPendentes,
+      descricao: `${demandasConcluidas} concluídas`,
+      icon: ClipboardList,
+    },
+    {
+      label: 'Visitantes hoje',
+      valor: visitantesHoje,
+      descricao: `${visitantes.length} registros totais`,
+      icon: Users,
+    },
+    {
+      label: 'Total de demandas',
+      valor: demandas.length,
+      descricao: 'Acompanhamento operacional',
+      icon: TrendingUp,
+    },
+  ]
+
+  const grupos: GrupoArea[] = [
+    {
+      titulo: 'Cadastros',
+      descricao: 'Base territorial e turística do município.',
+      areas: [
+        {
+          titulo: 'Pontos turísticos',
+          descricao: 'Cadastre atrativos, localização, contatos e situação atual.',
+          href: '/turismo/pontos',
+          icon: MapPin,
+        },
+      ],
+    },
+    {
+      titulo: 'Operação',
+      descricao: 'Rotina de atendimento, demandas e visitação.',
+      areas: [
+        {
+          titulo: 'Demandas',
+          descricao: 'Controle melhorias, sinalização, acesso, limpeza e estrutura.',
+          href: '/turismo/demandas',
+          icon: ClipboardList,
+        },
+      ],
+    },
+    {
+      titulo: 'Público',
+      descricao: 'Acompanhamento do fluxo de visitantes.',
+      areas: [
+        {
+          titulo: 'Visitantes',
+          descricao: 'Registre visitantes, origem, pontos visitados e perfil do fluxo.',
+          href: '/turismo/visitantes',
+          icon: Users,
+        },
+      ],
+    },
+    {
+      titulo: 'Relatórios',
+      descricao: 'Indicadores para gestão pública e tomada de decisão.',
+      areas: [
+        {
+          titulo: 'Dashboard',
+          descricao: 'Acompanhe os principais indicadores do turismo municipal.',
+          href: '/turismo/dashboard',
+          icon: BarChart3,
+        },
+        {
+          titulo: 'Relatórios',
+          descricao: 'Analise demandas, visitação e desempenho dos atrativos.',
+          href: '/turismo/relatorios',
+          icon: BarChart3,
+        },
+      ],
+    },
+  ]
+
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloTurismoNav currentPath="/turismo" />
+    <ModuleLayout sidebar={<ModuloTurismoNav currentPath="/turismo" />}>
+      <ModuleHeader
+        title="Turismo"
+        eyebrow="Gestão turística"
+        description="Organize pontos turísticos, demandas operacionais, visitantes e relatórios em uma visão única para apoiar o desenvolvimento turístico de Mineiros."
+        icon={LayoutDashboard}
+        accent="emerald"
+        context="Desenvolvimento turístico"
+        action={
+          <Link
+            href={getTenantPath('/turismo/dashboard')}
+            className="btn-primary w-full justify-center md:w-auto"
+          >
+            <BarChart3 size={16} aria-hidden="true" />
+            Abrir dashboard
+          </Link>
+        }
+      />
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Turismo
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Gestão dos pontos turísticos, demandas, visitantes e ações estratégicas para o desenvolvimento turístico de Mineiros.
-            </p>
-          </div>
+      <ModuleGrid columns={4}>
+        {indicadores.map((indicador) => (
+          <ModuleMetricCard
+            key={indicador.label}
+            label={indicador.label}
+            value={indicador.valor}
+            description={indicador.descricao}
+            icon={indicador.icon}
+            accent="emerald"
+          />
+        ))}
+      </ModuleGrid>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Pontos cadastrados</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {pontos.length}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Pontos ativos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {pontosAtivos}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Demandas pendentes</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {demandasPendentes}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Visitantes hoje</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {visitantesHoje}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Link href="/turismo/pontos" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Pontos turísticos
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Cadastro dos atrativos, localização, contatos e situação atual.
-              </p>
-            </Link>
-
-            <Link href="/turismo/demandas" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Demandas
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Controle de melhorias, sinalização, limpeza, acesso e estrutura.
-              </p>
-            </Link>
-
-            <Link href="/turismo/visitantes" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Visitantes
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Registro de visitantes, origem e pontos visitados.
-              </p>
-            </Link>
-
-            <Link href="/turismo/relatorios" className={moduloCardClassName()}>
-              <h2 className="text-lg font-bold text-slate-900">
-                Relatórios
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Indicadores turísticos, demandas e fluxo de visitação.
-              </p>
-            </Link>
-          </div>
-
-          <div className={cardClassName()}>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              Resumo estratégico
-            </h2>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Demandas concluídas</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
-                  {demandasConcluidas}
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Total de demandas</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
-                  {demandas.length}
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Visitantes registrados</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
-                  {visitantes.length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
+      {grupos.map((grupo) => (
+        <ModuleSectionGrid
+          key={grupo.titulo}
+          title={grupo.titulo}
+          description={grupo.descricao}
+          columns={3}
+        >
+          {grupo.areas.map((area) => (
+            <ModuleAreaCard
+              key={area.href}
+              title={area.titulo}
+              description={area.descricao}
+              href={area.href}
+              icon={area.icon}
+              accent="emerald"
+            />
+          ))}
+        </ModuleSectionGrid>
+      ))}
+    </ModuleLayout>
   )
 }

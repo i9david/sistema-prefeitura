@@ -1,14 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+
+type SupabaseTenant = Awaited<ReturnType<typeof exigirPermissaoAction>>['supabase']
 
 function normalizarTelefone(valor: string) {
   return valor.replace(/\D/g, '').slice(0, 11)
@@ -41,7 +36,7 @@ function agoraBrasil() {
 }
 
 async function encerrarVisitantesExpirados(
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: SupabaseTenant
 ) {
   const { data: visitantesAtivos, error: buscaError } = await supabase
     .from('visitantes')
@@ -77,6 +72,18 @@ async function encerrarVisitantesExpirados(
         throw new Error(updateError.message)
       }
 
+      const { error: visitaError } = await supabase
+        .from('visitante_visitas')
+        .update({
+          status: 'inativo',
+          horario_saida: hora,
+        })
+        .eq('visitante_id', visitante.id)
+
+      if (visitaError) {
+        throw new Error(visitaError.message)
+      }
+
       if (visitante.destino === 'museu') {
         await supabase
           .from('museu_visitantes')
@@ -88,6 +95,60 @@ async function encerrarVisitantesExpirados(
       }
     }
   }
+}
+
+async function buscarOuCriarPessoaVisitante({
+  supabase,
+  nome,
+  telefone,
+}: {
+  supabase: SupabaseTenant
+  nome: string
+  telefone: string
+}) {
+  const { data: pessoas, error: erroBusca } = await supabase
+    .from('pessoas')
+    .select('id')
+    .eq('telefone', telefone)
+    .limit(1)
+
+  if (erroBusca) {
+    redirect(`/visitantes?message=${encodeURIComponent(erroBusca.message)}`)
+  }
+
+  const pessoaExistente = pessoas?.[0]
+
+  if (pessoaExistente?.id) {
+    const { error: erroAtualizacao } = await supabase
+      .from('pessoas')
+      .update({
+        nome,
+        telefone,
+      })
+      .eq('id', pessoaExistente.id)
+
+    if (erroAtualizacao) {
+      redirect(`/visitantes?message=${encodeURIComponent(erroAtualizacao.message)}`)
+    }
+
+    return pessoaExistente.id as string
+  }
+
+  const { data: novaPessoa, error: erroPessoa } = await supabase
+    .from('pessoas')
+    .insert({
+      nome,
+      telefone,
+      data_nascimento: null,
+    })
+    .select('id')
+    .single()
+
+  if (erroPessoa) {
+    redirect(`/visitantes?message=${encodeURIComponent(erroPessoa.message)}`)
+  }
+
+  return novaPessoa.id as string
 }
 
 export async function criarVisitante(formData: FormData) {
@@ -131,6 +192,11 @@ export async function criarVisitante(formData: FormData) {
   }
 
   const { data, hora } = agoraBrasil()
+  const pessoaId = await buscarOuCriarPessoaVisitante({
+    supabase,
+    nome,
+    telefone,
+  })
 
   const { data: visitanteCriado, error } = await supabase
     .from('visitantes')
@@ -145,13 +211,41 @@ export async function criarVisitante(formData: FormData) {
       status: 'ativo',
       origem: 'recepcao',
       destino,
-      pessoa_id: null,
+      pessoa_id: pessoaId,
     })
     .select('id, nome, telefone, data_visita, horario_entrada, horario_saida, status, observacoes')
     .single()
 
   if (error) {
     redirect(`/visitantes?message=${encodeURIComponent(error.message)}`)
+  }
+
+  const { error: visitaError } = await supabase.from('visitante_visitas').insert({
+    pessoa_id: pessoaId,
+    visitante_id: visitanteCriado.id,
+    destino,
+    motivo,
+    data_visita: data,
+    horario_entrada: hora,
+    horario_saida: null,
+    status: 'ativo',
+    origem: 'recepcao',
+    observacoes: observacoes || null,
+  })
+
+  if (visitaError) {
+    await supabase
+      .from('visitantes')
+      .update({
+        status: 'inativo',
+        horario_saida: hora,
+        observacoes:
+          observacoes ||
+          'Registro encerrado automaticamente porque o histórico CRM não foi criado.',
+      })
+      .eq('id', visitanteCriado.id)
+
+    redirect(`/visitantes?message=${encodeURIComponent(visitaError.message)}`)
   }
 
   if (destino === 'museu' && visitanteCriado) {
@@ -209,6 +303,18 @@ export async function encerrarVisitante(formData: FormData) {
 
   if (error) {
     redirect(`/visitantes?message=${encodeURIComponent(error.message)}`)
+  }
+
+  const { error: visitaError } = await supabase
+    .from('visitante_visitas')
+    .update({
+      status: 'inativo',
+      horario_saida: hora,
+    })
+    .eq('visitante_id', id)
+
+  if (visitaError) {
+    redirect(`/visitantes?message=${encodeURIComponent(visitaError.message)}`)
   }
 
   if (visitante.destino === 'museu') {

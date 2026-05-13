@@ -1,12 +1,10 @@
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
+import { PageEmptyState, PageList, PageShell } from '@/components/page-shell'
+import { FormMessage } from '@/components/form'
+import { VisitanteForm } from '@/components/visitante-form'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { exigirPermissaoPagina } from '@/lib/seguranca-paginas'
+import { criarVisitante, encerrarVisitante } from './actions'
 
 type Visitante = {
   id: string
@@ -19,17 +17,6 @@ type Visitante = {
   destino: string | null
   motivo: string | null
   observacoes: string | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-}
-
-function formatarData(data: string | null | undefined) {
-  if (!data) return '-'
-  const partes = data.split('-')
-  if (partes.length !== 3) return data
-  return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
 
 function formatarTelefone(valor: string | null | undefined) {
@@ -48,16 +35,17 @@ function formatarTelefone(valor: string | null | undefined) {
     .replace(/(\d{5})(\d+)/, '$1-$2')
 }
 
-function getDestinoLabel(destino: string | null | undefined) {
-  return destino === 'museu' ? 'Museu' : 'Centro Cultural'
+function formatarData(data: string | null | undefined) {
+  if (!data) return '-'
+
+  const partes = data.split('-')
+  if (partes.length !== 3) return data
+
+  return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
 
-function getMesAtual() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-  }).format(new Date())
+function getDestinoLabel(destino: string | null | undefined) {
+  return destino === 'museu' ? 'Museu' : 'Centro Cultural'
 }
 
 function getHojeBrasil() {
@@ -69,30 +57,20 @@ function getHojeBrasil() {
   }).format(new Date())
 }
 
-export default async function VisitantesRelatoriosPage({
+export default async function VisitantesPage({
   searchParams,
 }: {
   searchParams: Promise<{
     message?: string
-    mes?: string
   }>
 }) {
-  const params = await searchParams
-  const mesSelecionado = params.mes?.trim() || getMesAtual()
-  const hoje = getHojeBrasil()
+  await exigirPermissaoPagina('Centro Cultural', 'Visitantes', 'visualizar')
 
+  const params = await searchParams
+  const hoje = getHojeBrasil()
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login')
-
-  const dataInicio = `${mesSelecionado}-01`
-  const dataFim = `${mesSelecionado}-31`
-
-  const { data, error } = await supabase
+  const { data: visitantesData, error } = await supabase
     .from('visitantes')
     .select(`
       id,
@@ -106,250 +84,98 @@ export default async function VisitantesRelatoriosPage({
       motivo,
       observacoes
     `)
-    .gte('data_visita', dataInicio)
-    .lte('data_visita', dataFim)
+    .eq('status', 'ativo')
     .order('data_visita', { ascending: false })
     .order('horario_entrada', { ascending: false })
 
   if (error) {
-    redirect(`/visitantes/relatorios?message=${encodeURIComponent(error.message)}`)
+    throw new Error(error.message)
   }
 
-  const visitantes = (data ?? []) as Visitante[]
-
-  const visitantesHoje = visitantes.filter((item) => item.data_visita === hoje)
-
-  const visitantesCentroCultural = visitantes.filter(
-    (item) => item.destino !== 'museu'
-  )
-
-  const visitantesMuseu = visitantes.filter(
-    (item) => item.destino === 'museu'
-  )
-
-  const visitantesHojeCentroCultural = visitantesHoje.filter(
-    (item) => item.destino !== 'museu'
-  )
-
-  const visitantesHojeMuseu = visitantesHoje.filter(
-    (item) => item.destino === 'museu'
-  )
-
-  const ativosCentroCultural = visitantesCentroCultural.filter(
-    (item) => item.status === 'ativo'
-  ).length
-
-  const ativosMuseu = visitantesMuseu.filter(
-    (item) => item.status === 'ativo'
-  ).length
-
-  const encerradosCentroCultural = visitantesCentroCultural.filter(
-    (item) => item.status === 'inativo'
-  ).length
-
-  const encerradosMuseu = visitantesMuseu.filter(
-    (item) => item.status === 'inativo'
-  ).length
-
-  const agrupadoPorDia = visitantes.reduce<Record<string, Visitante[]>>((acc, item) => {
-    const chave = item.data_visita || 'Sem data'
-    if (!acc[chave]) acc[chave] = []
-    acc[chave].push(item)
-    return acc
-  }, {})
-
-  const diasOrdenados = Object.keys(agrupadoPorDia).sort((a, b) => b.localeCompare(a))
+  const visitantes = (visitantesData ?? []) as Visitante[]
+  const visitantesHoje = visitantes.filter((visitante) => visitante.data_visita === hoje)
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCentroCulturalNav currentPath="/visitantes/relatorios" />
+    <PageShell
+      nav={<ModuloCentroCulturalNav currentPath="/visitantes" />}
+      title="Visitantes"
+      subtitle="Registre entradas, acompanhe visitantes ativos e encerre visitas em andamento."
+      primaryAction={{ label: 'Relatório mensal', href: '/visitantes/relatorios' }}
+    >
+      {params.message && <FormMessage>{params.message}</FormMessage>}
 
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Relatório mensal de visitantes
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Acompanhamento automático de visitantes por módulo, separando Centro Cultural e Museu.
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
+        <section className="ui-card p-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-950">Registrar entrada</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Cadastro rápido para recepção do Centro Cultural e Museu.
             </p>
           </div>
 
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <form method="get" className="grid gap-4 md:grid-cols-[260px_180px]">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Mês de referência
-                  </label>
-                  <input
-                    type="month"
-                    name="mes"
-                    defaultValue={mesSelecionado}
-                    className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                  >
-                    Gerar relatório
-                  </button>
-                </div>
-              </form>
-
-              <a
-                href={`/visitantes/relatorios/imprimir?mes=${mesSelecionado}`}
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Versão para impressão
-              </a>
-            </div>
-
-            {params.message && (
-              <p className="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                {params.message}
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Centro Cultural no mês</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {visitantesCentroCultural.length}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Museu no mês</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {visitantesMuseu.length}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Centro Cultural hoje</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {visitantesHojeCentroCultural.length}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Museu hoje</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {visitantesHojeMuseu.length}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Ativos Centro Cultural</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {ativosCentroCultural}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Encerrados Centro Cultural</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {encerradosCentroCultural}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Ativos Museu</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {ativosMuseu}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm font-medium text-slate-500">Encerrados Museu</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                {encerradosMuseu}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              Consolidado por dia
-            </h2>
-
-            {diasOrdenados.length > 0 ? (
-              <div className="mt-6 space-y-4">
-                {diasOrdenados.map((dia) => {
-                  const lista = agrupadoPorDia[dia]
-                  const totalCentro = lista.filter((item) => item.destino !== 'museu').length
-                  const totalMuseu = lista.filter((item) => item.destino === 'museu').length
-
-                  return (
-                    <div
-                      key={dia}
-                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <h3 className="text-xl font-bold text-slate-900">
-                            {formatarData(dia)}
-                          </h3>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Centro Cultural: {totalCentro} • Museu: {totalMuseu}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 overflow-x-auto">
-                        <table className="min-w-full border-separate border-spacing-y-2 text-sm">
-                          <thead>
-                            <tr>
-                              <th className="px-4 py-3 text-left font-semibold text-slate-600">Nome</th>
-                              <th className="px-4 py-3 text-left font-semibold text-slate-600">Telefone</th>
-                              <th className="px-4 py-3 text-left font-semibold text-slate-600">Destino</th>
-                              <th className="px-4 py-3 text-left font-semibold text-slate-600">Motivo</th>
-                              <th className="px-4 py-3 text-left font-semibold text-slate-600">Status</th>
-                            </tr>
-                          </thead>
-
-                          <tbody>
-                            {lista.map((item) => (
-                              <tr key={item.id} className="bg-white">
-                                <td className="rounded-l-2xl px-4 py-4 font-medium text-slate-900">
-                                  {item.nome}
-                                </td>
-                                <td className="px-4 py-4 text-slate-700">
-                                  {formatarTelefone(item.telefone)}
-                                </td>
-                                <td className="px-4 py-4 text-slate-700">
-                                  {getDestinoLabel(item.destino)}
-                                </td>
-                                <td className="px-4 py-4 text-slate-700">
-                                  {item.motivo || '-'}
-                                </td>
-                                <td className="rounded-r-2xl px-4 py-4 text-slate-700">
-                                  {item.status || '-'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-600">
-                Nenhum visitante encontrado no mês selecionado.
-              </p>
-            )}
-          </div>
+          <VisitanteForm action={criarVisitante} />
         </section>
+
+        <PageList
+          title="Visitantes ativos"
+          subtitle="Visitas em andamento registradas pela recepção."
+          meta={
+            <div className="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
+              {visitantesHoje.length} hoje
+            </div>
+          }
+        >
+          {visitantes.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table>
+                <thead>
+                  <tr className="border-b bg-slate-50">
+                    <th className="px-4 py-3 text-left">Visitante</th>
+                    <th className="px-4 py-3 text-left">Telefone</th>
+                    <th className="px-4 py-3 text-left">Destino</th>
+                    <th className="px-4 py-3 text-left">Motivo</th>
+                    <th className="px-4 py-3 text-left">Entrada</th>
+                    <th className="px-4 py-3 text-left">Ações</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {visitantes.map((visitante) => (
+                    <tr key={visitante.id} className="border-b">
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {visitante.nome}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {formatarTelefone(visitante.telefone)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {getDestinoLabel(visitante.destino)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {visitante.motivo ?? '-'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {formatarData(visitante.data_visita)} às{' '}
+                        {visitante.horario_entrada ?? '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <form action={encerrarVisitante}>
+                          <input type="hidden" name="id" value={visitante.id} />
+                          <button type="submit" className="btn-secondary py-2">
+                            Encerrar visita
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <PageEmptyState>Nenhum visitante ativo no momento.</PageEmptyState>
+          )}
+        </PageList>
       </div>
-    </main>
+    </PageShell>
   )
 }

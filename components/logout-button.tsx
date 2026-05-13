@@ -1,38 +1,27 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
+'use client'
 
-export function LogoutButton({
+import { LogOut } from 'lucide-react'
+import { logout } from '@/app/logout/actions'
+import { memo } from 'react'
+
+function LogoutButtonInner({
   label = 'Sair do sistema',
   className = '',
 }: {
   label?: string
   className?: string
 }) {
-  async function logout() {
-    'use server'
-
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-    redirect('/login')
-  }
-
   return (
     <form action={logout}>
       <button
         type="submit"
-        className={
-          className ||
-          'inline-flex rounded-2xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700'
-        }
+        className={className || 'btn-danger'}
       >
-        {label}
+        <LogOut size={16} />
+        <span className="module-sidebar-text">{label}</span>
       </button>
     </form>
   )
 }
+
+export const LogoutButton = memo(LogoutButtonInner)

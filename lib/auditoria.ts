@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { getContextoPermissoes } from '@/lib/get-permissoes'
 
 type RegistrarAuditoriaInput = {

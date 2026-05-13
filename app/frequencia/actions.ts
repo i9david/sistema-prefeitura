@@ -1,13 +1,28 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
+
+type FrequenciaExistente = {
+  aluno_id: string
+  origem: string | null
+  hora_registro: string | null
+}
+
+type AlunoFrequencia = {
+  id: string
+  status: string
+}
+
+type MatriculaAluno = {
+  alunos: AlunoFrequencia | AlunoFrequencia[] | null
+}
+
+function getAlunoMatricula(matricula: MatriculaAluno) {
+  if (!matricula.alunos) return null
+  if (Array.isArray(matricula.alunos)) return matricula.alunos[0] ?? null
+  return matricula.alunos
+}
 
 export async function salvarFrequencia(formData: FormData) {
   const { supabase, usuarioInterno } = await exigirPermissaoAction(
@@ -25,9 +40,9 @@ export async function salvarFrequencia(formData: FormData) {
 
   if (usuarioInterno.professor_id) {
     const { data: aulaPermitida, error: aulaError } = await supabase
-      .from('aulas')
-      .select('id, professor_id')
-      .eq('id', aulaId)
+      .from('aula_professores')
+      .select('id')
+      .eq('aula_id', aulaId)
       .eq('professor_id', usuarioInterno.professor_id)
       .maybeSingle()
 
@@ -40,17 +55,57 @@ export async function salvarFrequencia(formData: FormData) {
     }
   }
 
-  const { data: alunosData, error: alunosError } = await supabase
-    .from('alunos')
-    .select('id')
+  const { data: matriculasData, error: matriculasError } = await supabase
+    .from('aluno_matriculas')
+    .select(`
+      alunos:aluno_id!aluno_matriculas_aluno_id_fkey (
+        id,
+        status
+      )
+    `)
     .eq('aula_id', aulaId)
     .eq('status', 'ativo')
+    .lte('data_inicio', dataAula)
+    .or(`data_fim.is.null,data_fim.gte.${dataAula}`)
 
-  if (alunosError) {
-    redirect(`/frequencia?message=${encodeURIComponent(alunosError.message)}`)
+  if (matriculasError) {
+    redirect(`/frequencia?message=${encodeURIComponent(matriculasError.message)}`)
   }
 
-  const alunos = alunosData ?? []
+  let alunos = ((matriculasData ?? []) as MatriculaAluno[])
+    .map(getAlunoMatricula)
+    .filter((aluno): aluno is AlunoFrequencia => Boolean(aluno && aluno.status === 'ativo'))
+
+  const { data: matriculasAtivasDaTurma, error: matriculasAtivasDaTurmaError } =
+    alunos.length === 0
+      ? await supabase
+          .from('aluno_matriculas')
+          .select('id')
+          .eq('aula_id', aulaId)
+          .eq('status', 'ativo')
+          .limit(1)
+      : { data: [], error: null }
+
+  if (matriculasAtivasDaTurmaError) {
+    redirect(`/frequencia?message=${encodeURIComponent(matriculasAtivasDaTurmaError.message)}`)
+  }
+
+  const usarFallbackLegado =
+    alunos.length === 0 && (matriculasAtivasDaTurma ?? []).length === 0
+
+  if (usarFallbackLegado) {
+    const { data: alunosData, error: alunosError } = await supabase
+      .from('alunos')
+      .select('id, status')
+      .eq('aula_id', aulaId)
+      .eq('status', 'ativo')
+
+    if (alunosError) {
+      redirect(`/frequencia?message=${encodeURIComponent(alunosError.message)}`)
+    }
+
+    alunos = (alunosData ?? []) as AlunoFrequencia[]
+  }
 
   if (alunos.length === 0) {
     redirect('/frequencia?message=Não existem alunos ativos nesta turma')
@@ -80,22 +135,45 @@ export async function salvarFrequencia(formData: FormData) {
     )
   }
 
-  const { error: deleteError } = await supabase
-    .from('frequencias')
-    .delete()
-    .eq('aula_id', aulaId)
-    .eq('data_aula', dataAula)
+  const alunoIds = registrosValidos.map((registro) => registro.aluno_id)
 
-  if (deleteError) {
-    redirect(`/frequencia?message=${encodeURIComponent(deleteError.message)}`)
+  const { data: frequenciasExistentes, error: frequenciasExistentesError } =
+    await supabase
+      .from('frequencias')
+      .select('aluno_id, origem, hora_registro')
+      .eq('aula_id', aulaId)
+      .eq('data_aula', dataAula)
+      .in('aluno_id', alunoIds)
+
+  if (frequenciasExistentesError) {
+    redirect(`/frequencia?message=${encodeURIComponent(frequenciasExistentesError.message)}`)
   }
 
-  const { error: insertError } = await supabase
-    .from('frequencias')
-    .insert(registrosValidos)
+  const frequenciasPorAluno = new Map(
+    ((frequenciasExistentes ?? []) as FrequenciaExistente[]).map((frequencia) => [
+      frequencia.aluno_id,
+      frequencia,
+    ])
+  )
 
-  if (insertError) {
-    redirect(`/frequencia?message=${encodeURIComponent(insertError.message)}`)
+  const registrosParaSalvar = registrosValidos.map((registro) => {
+    const frequenciaExistente = frequenciasPorAluno.get(registro.aluno_id)
+
+    return {
+      ...registro,
+      origem: frequenciaExistente?.origem ?? registro.origem,
+      hora_registro: frequenciaExistente?.hora_registro ?? null,
+    }
+  })
+
+  const { error: upsertError } = await supabase
+    .from('frequencias')
+    .upsert(registrosParaSalvar, {
+      onConflict: 'municipio_id,aula_id,aluno_id,data_aula',
+    })
+
+  if (upsertError) {
+    redirect(`/frequencia?message=${encodeURIComponent(upsertError.message)}`)
   }
 
   redirect(

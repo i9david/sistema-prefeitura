@@ -1,12 +1,7 @@
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { ModuloMuseuNav } from '@/components/modulo-museu-nav'
 
 type CategoriaRelacionada =
@@ -134,7 +129,7 @@ export default async function MuseuPecaDetalhePage({
         status_operacional,
         foto_url,
         created_at,
-        categorias:museu_categorias (
+        categorias:museu_categorias!museu_acervo_categoria_id_fkey (
           id,
           nome
         )

@@ -1,13 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from "@/components/sidebar"
-import { ExternalLink, Radar } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { ExternalLink, FileCheck2, FileSearch, Radar, Satellite, ShieldCheck } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloCaptacaoNav } from '@/components/modulo-captacao-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import {
   aprovarCapturaRadar,
   ignorarCapturaRadar,
@@ -42,15 +40,6 @@ type CapturaRadar = {
   status: string | null
   hash_unico: string | null
   created_at: string | null
-  fontes?: {
-    id: string
-    nome: string
-    orgao: string | null
-  } | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarData(data: string | null | undefined) {
@@ -190,12 +179,7 @@ export default async function RadarAutomaticoPage({
       prazo_inscricao,
       status,
       hash_unico,
-      created_at,
-      fontes:captacao_radar_fontes (
-        id,
-        nome,
-        orgao
-      )
+      created_at
     `)
     .order('created_at', { ascending: false })
 
@@ -229,6 +213,12 @@ export default async function RadarAutomaticoPage({
 
   const fontes = (fontesData ?? []) as FonteRadar[]
   const capturas = (capturasData ?? []) as unknown as CapturaRadar[]
+  const fontesPorId = new Map(fontes.map((fonte) => [fonte.id, fonte]))
+
+  function getFonte(fonteId: string | null) {
+    if (!fonteId) return null
+    return fontesPorId.get(fonteId) ?? null
+  }
 
   const fontesAtivas = fontes.filter((item) => item.status === 'ativa').length
   const aguardandoRevisao = capturas.filter((item) => item.status === 'aguardando_revisao').length
@@ -236,65 +226,30 @@ export default async function RadarAutomaticoPage({
   const ignoradas = capturas.filter((item) => item.status === 'ignorada').length
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloCaptacaoNav currentPath="/projetos-captacao/radar" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Radar Automático
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Monitore fontes oficiais, revise oportunidades capturadas e aprove apenas o que for útil para a carteira de projetos.
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-violet-50 p-4 text-violet-700">
-                <Radar size={34} />
-              </div>
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloCaptacaoNav currentPath="/projetos-captacao/radar" />}>
+      <ModuleHeader
+        title="Radar Automático"
+        eyebrow="Operação"
+        description="Monitore fontes oficiais, revise oportunidades capturadas e aprove apenas o que for útil para a carteira de projetos."
+        icon={Radar}
+        accent="violet"
+        context="Monitoramento de editais"
+      />
 
           {params.message && (
-            <div className="rounded-[28px] border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+            <ModuleCard className="p-5 text-sm text-slate-700">
               {params.message}
-            </div>
+            </ModuleCard>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Fontes monitoradas</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {fontes.length}
-              </p>
-            </div>
+          <ModuleGrid columns={4}>
+            <ModuleMetricCard label="Fontes monitoradas" value={fontes.length} icon={Satellite} accent="violet" />
+            <ModuleMetricCard label="Fontes ativas" value={fontesAtivas} icon={ShieldCheck} accent="violet" />
+            <ModuleMetricCard label="Aguardando revisão" value={aguardandoRevisao} icon={FileSearch} accent="violet" />
+            <ModuleMetricCard label="Aprovadas" value={aprovadas} icon={FileCheck2} accent="violet" />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Fontes ativas</p>
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                {fontesAtivas}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Aguardando revisão</p>
-              <p className="mt-2 text-2xl font-bold text-amber-700">
-                {aguardandoRevisao}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Aprovadas</p>
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                {aprovadas}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -316,9 +271,9 @@ export default async function RadarAutomaticoPage({
             <div className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-800">
               As oportunidades capturadas entram como <strong>aguardando revisão</strong>. Depois de revisar, você pode aprovar para enviar ao módulo de Oportunidades ou ignorar.
             </div>
-          </div>
+          </ModuleCard>
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -408,9 +363,9 @@ export default async function RadarAutomaticoPage({
                 Nenhuma fonte cadastrada no radar.
               </p>
             )}
-          </div>
+          </ModuleCard>
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -489,11 +444,14 @@ export default async function RadarAutomaticoPage({
 
             {capturas.length > 0 ? (
               <div className="mt-6 space-y-4">
-                {capturas.map((captura) => (
-                  <div
-                    key={captura.id}
-                    className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                  >
+                {capturas.map((captura) => {
+                  const fonte = getFonte(captura.fonte_id)
+
+                  return (
+                    <div
+                      key={captura.id}
+                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                    >
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="space-y-3">
                         <div>
@@ -531,7 +489,7 @@ export default async function RadarAutomaticoPage({
                         <div className="space-y-1 text-sm text-slate-700">
                           <p>
                             <span className="font-semibold">Fonte:</span>{' '}
-                            {captura.fontes?.nome || 'Sem fonte vinculada'}
+                            {fonte?.nome || 'Sem fonte vinculada'}
                           </p>
 
                           <p>
@@ -597,7 +555,8 @@ export default async function RadarAutomaticoPage({
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="mt-4 text-sm text-slate-600">
@@ -610,9 +569,7 @@ export default async function RadarAutomaticoPage({
                 Capturas ignoradas neste filtro: {ignoradas}
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }

@@ -1,11 +1,7 @@
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
-import { createClient } from '@/lib/supabase/server'
 
 type Artesao = {
   id: string
@@ -86,7 +82,7 @@ export default async function RelatorioArtesaoPrintPage({
       casa_artesao_vendas!inner (
         data_venda
       ),
-      casa_artesao_produtos (
+      casa_artesao_produtos!casa_artesao_producao_produto_id_fkey (
         nome
       )
     `)

@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { Plus, Search, ShieldCheck, UserCheck, Users } from 'lucide-react'
+import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { ModuloAdministrativoNav } from '@/components/modulo-administrativo-nav'
+import { ModuleCard, ModuleMetricCard } from '@/components/module/module-card'
+import { ModuleGrid } from '@/components/module/module-grid'
+import { ModuleHeader } from '@/components/module/module-header'
+import { ModuleLayout } from '@/components/module/module-layout'
 import {
   atualizarAcesso,
   criarAcesso,
@@ -26,10 +30,6 @@ type Acesso = {
   pode_criar: boolean | null
   pode_editar: boolean | null
   pode_excluir: boolean | null
-}
-
-function cardClassName() {
-  return 'rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
 }
 
 function formatarData(data: string | null | undefined) {
@@ -57,6 +57,7 @@ const modulosSistema = [
   { value: 'biblioteca', label: 'Biblioteca' },
   { value: 'administrativo', label: 'Administrativo' },
   { value: 'turismo', label: 'Turismo' },
+  { value: 'almoxarifado', label: 'Almoxarifado' },
 ]
 
 function getModuloLabel(valor: string | null | undefined) {
@@ -140,35 +141,26 @@ export default async function AdministrativoUsuariosPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[300px_1fr]">
-        <ModuloAdministrativoNav currentPath="/administrativo/usuarios" />
-
-        <section className="space-y-6">
-          <div className={cardClassName()}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Usuários e Acessos
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Consulte usuários, cadastre novos usuários e edite permissões por módulo.
-                </p>
-              </div>
-
-              {!modoNovo && (
-                <a
-                  href="/administrativo/usuarios?novo=1"
-                  className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  Novo usuário
-                </a>
-              )}
-            </div>
-          </div>
+    <ModuleLayout sidebar={<ModuloAdministrativoNav currentPath="/administrativo/usuarios" />}>
+      <ModuleHeader
+        title="Usuários e Acessos"
+        eyebrow="Cadastros"
+        description="Consulte usuários, cadastre novos usuários e edite permissões por módulo."
+        icon={ShieldCheck}
+        accent="blue"
+        context="Controle de acesso"
+        action={
+          !modoNovo && (
+            <a href="/administrativo/usuarios?novo=1" className="btn-primary w-full justify-center md:w-auto">
+              <Plus size={16} aria-hidden="true" />
+              Novo usuário
+            </a>
+          )
+        }
+      />
 
           {modoNovo && (
-            <div className={cardClassName()}>
+            <ModuleCard>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -246,10 +238,10 @@ export default async function AdministrativoUsuariosPage({
                   </a>
                 </div>
               </form>
-            </div>
+            </ModuleCard>
           )}
 
-          <div className={cardClassName()}>
+          <ModuleCard>
             <form method="get" className="grid gap-3 md:grid-cols-[1fr_220px_180px]">
               <input
                 name="busca"
@@ -270,8 +262,9 @@ export default async function AdministrativoUsuariosPage({
 
               <button
                 type="submit"
-                className="rounded-2xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
+                className="btn-primary justify-center"
               >
+                <Search size={16} aria-hidden="true" />
                 Buscar
               </button>
             </form>
@@ -287,32 +280,15 @@ export default async function AdministrativoUsuariosPage({
                 {erro}
               </p>
             )}
-          </div>
+          </ModuleCard>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Total de usuários</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {usuarios.length}
-              </p>
-            </div>
+          <ModuleGrid columns={3}>
+            <ModuleMetricCard label="Total de usuários" value={usuarios.length} icon={Users} accent="blue" />
+            <ModuleMetricCard label="Usuários ativos" value={usuarios.filter((usuario) => usuario.status === 'ativo').length} icon={UserCheck} accent="blue" />
+            <ModuleMetricCard label="Acessos cadastrados" value={acessos.length} icon={ShieldCheck} accent="blue" />
+          </ModuleGrid>
 
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Usuários ativos</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {usuarios.filter((usuario) => usuario.status === 'ativo').length}
-              </p>
-            </div>
-
-            <div className={cardClassName()}>
-              <p className="text-sm text-slate-500">Acessos cadastrados</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {acessos.length}
-              </p>
-            </div>
-          </div>
-
-          <div className={cardClassName()}>
+          <ModuleCard>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Lista de usuários
             </h2>
@@ -500,9 +476,7 @@ export default async function AdministrativoUsuariosPage({
                 Nenhum usuário encontrado.
               </p>
             )}
-          </div>
-        </section>
-      </div>
-    </main>
+          </ModuleCard>
+    </ModuleLayout>
   )
 }
