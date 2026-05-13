@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Sidebar } from "@/components/sidebar"
 
 function somenteNumeros(valor: string) {
@@ -20,6 +21,7 @@ function nomeCompletoValido(nome: string) {
 
 export async function criarArtesao(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const nome = String(formData.get('nome') ?? '').trim()
   const telefone = somenteNumeros(String(formData.get('telefone') ?? '').trim())
@@ -35,7 +37,7 @@ export async function criarArtesao(formData: FormData) {
     redirect('/casa-artesao/artesaos?message=Informe um telefone com DDD e 11 dígitos')
   }
 
-  const { error } = await supabase.from('casa_artesao_artesaos').insert({
+  const { error } = await admin.from('casa_artesao_artesaos').insert({
     nome,
     telefone: telefone || null,
     chave_pix: chavePix || null,
@@ -53,6 +55,7 @@ export async function criarArtesao(formData: FormData) {
 
 export async function atualizarArtesao(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const nome = String(formData.get('nome') ?? '').trim()
@@ -74,7 +77,7 @@ export async function atualizarArtesao(formData: FormData) {
     redirect('/casa-artesao/artesaos?message=Informe um telefone com DDD e 11 dígitos')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_artesaos')
     .update({
       nome,
@@ -95,13 +98,14 @@ export async function atualizarArtesao(formData: FormData) {
 
 export async function ativarArtesao(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
   const id = String(formData.get('id') ?? '').trim()
 
   if (!id) {
     redirect('/casa-artesao/artesaos?message=Artesão não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_artesaos')
     .update({ status: 'ativo' })
     .eq('id', id)
@@ -115,13 +119,14 @@ export async function ativarArtesao(formData: FormData) {
 
 export async function inativarArtesao(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
   const id = String(formData.get('id') ?? '').trim()
 
   if (!id) {
     redirect('/casa-artesao/artesaos?message=Artesão não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_artesaos')
     .update({ status: 'inativo' })
     .eq('id', id)

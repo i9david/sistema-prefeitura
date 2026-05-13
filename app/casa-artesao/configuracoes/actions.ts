@@ -1,12 +1,14 @@
 'use server'
 
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from "@/components/sidebar"
 
 export async function salvarConfiguracoesCasaArtesao(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
   const percentualComissao = Number(formData.get('percentual_comissao_padrao') ?? 0)
@@ -16,7 +18,7 @@ export async function salvarConfiguracoesCasaArtesao(formData: FormData) {
   }
 
   if (id) {
-    const { error } = await supabase
+    const { error } = await admin
       .from('casa_artesao_configuracoes')
       .update({
         percentual_comissao_padrao: percentualComissao,
@@ -28,7 +30,7 @@ export async function salvarConfiguracoesCasaArtesao(formData: FormData) {
       redirect(`/casa-artesao/configuracoes?message=${encodeURIComponent(error.message)}`)
     }
   } else {
-    const { error } = await supabase
+    const { error } = await admin
       .from('casa_artesao_configuracoes')
       .insert({
         percentual_comissao_padrao: percentualComissao,

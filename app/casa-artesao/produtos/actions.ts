@@ -1,12 +1,14 @@
 'use server'
 
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from "@/components/sidebar"
 
 export async function criarProduto(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const nome = String(formData.get('nome') || '').trim()
   const descricao = String(formData.get('descricao') || '').trim()
@@ -19,7 +21,7 @@ export async function criarProduto(formData: FormData) {
     redirect('/casa-artesao/produtos?message=Preencha os campos obrigatórios')
   }
 
-  const { error } = await supabase.from('casa_artesao_produtos').insert({
+  const { error } = await admin.from('casa_artesao_produtos').insert({
     nome,
     descricao: descricao || null,
     preco,
@@ -37,6 +39,7 @@ export async function criarProduto(formData: FormData) {
 
 export async function atualizarProduto(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') || '').trim()
   const nome = String(formData.get('nome') || '').trim()
@@ -54,7 +57,7 @@ export async function atualizarProduto(formData: FormData) {
     redirect('/casa-artesao/produtos?message=Preencha os campos obrigatórios')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_produtos')
     .update({
       nome,
@@ -75,13 +78,14 @@ export async function atualizarProduto(formData: FormData) {
 
 export async function inativarProduto(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
   const id = String(formData.get('id') || '').trim()
 
   if (!id) {
     redirect('/casa-artesao/produtos?message=Produto não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_produtos')
     .update({ status: 'inativo' })
     .eq('id', id)

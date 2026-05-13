@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from "@/components/sidebar"
@@ -16,6 +17,7 @@ function hojeBrasil() {
 
 export async function registrarVenda(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const produtoId = String(formData.get('produto_id') ?? '')
   const quantidade = Number(formData.get('quantidade') ?? 1)
@@ -43,7 +45,7 @@ export async function registrarVenda(formData: FormData) {
   const subtotal = quantidade * Number(produto.preco)
 
   // Criar venda
-  const { data: venda, error: vendaError } = await supabase
+  const { data: venda, error: vendaError } = await admin
     .from('casa_artesao_vendas')
     .insert({
       data_venda: dataHoje,
@@ -57,7 +59,7 @@ export async function registrarVenda(formData: FormData) {
   }
 
   // Criar item da venda
-  const { error: itemError } = await supabase
+  const { error: itemError } = await admin
     .from('casa_artesao_venda_itens')
     .insert({
       venda_id: venda.id,
@@ -73,7 +75,7 @@ export async function registrarVenda(formData: FormData) {
   }
 
   // Atualizar estoque
-  const { error: estoqueError } = await supabase
+  const { error: estoqueError } = await admin
     .from('casa_artesao_produtos')
     .update({
       quantidade: produto.quantidade - quantidade,

@@ -3,10 +3,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Sidebar } from "@/components/sidebar"
 
 export async function criarAnalise(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const projeto_id = String(formData.get('projeto_id') || '').trim()
   const oportunidade_id = String(formData.get('oportunidade_id') || '').trim()
@@ -20,7 +22,7 @@ export async function criarAnalise(formData: FormData) {
     redirect('/projetos-captacao/analises?message=Selecione um projeto')
   }
 
-  const { error } = await supabase.from('captacao_analises').insert({
+  const { error } = await admin.from('captacao_analises').insert({
     projeto_id,
     oportunidade_id: oportunidade_id || null,
     parecer: parecer || null,
@@ -40,6 +42,7 @@ export async function criarAnalise(formData: FormData) {
 
 export async function atualizarAnalise(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') || '').trim()
   const parecer = String(formData.get('parecer') || '').trim()
@@ -52,7 +55,7 @@ export async function atualizarAnalise(formData: FormData) {
     redirect('/projetos-captacao/analises?message=Análise inválida')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('captacao_analises')
     .update({
       parecer,

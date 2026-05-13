@@ -1,12 +1,14 @@
 'use server'
 
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from "@/components/sidebar"
 
 export async function entradaEstoque(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const produtoId = String(formData.get('produto_id'))
   const quantidade = Number(formData.get('quantidade'))
@@ -25,14 +27,14 @@ export async function entradaEstoque(formData: FormData) {
     redirect('/casa-artesao/estoque?message=Produto nï¿½o encontrado')
   }
 
-  await supabase
+  await admin
     .from('casa_artesao_produtos')
     .update({
       quantidade: (produto.quantidade ?? 0) + quantidade,
     })
     .eq('id', produtoId)
 
-  await supabase.from('casa_artesao_estoque_movimentacoes').insert({
+  await admin.from('casa_artesao_estoque_movimentacoes').insert({
     produto_id: produtoId,
     tipo: 'entrada_manual',
     quantidade,

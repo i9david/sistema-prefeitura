@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 
 type ProdutoVenda = {
@@ -35,6 +36,7 @@ function arredondarMoeda(valor: number) {
 
 export async function registrarVenda(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const clienteNome = String(formData.get('cliente_nome') ?? '').trim()
   const clienteTelefone = normalizarTelefone(
@@ -163,7 +165,7 @@ export async function registrarVenda(formData: FormData) {
     itensVenda.reduce((total, item) => total + item.subtotal, 0)
   )
 
-  const { data: venda, error: vendaError } = await supabase
+  const { data: venda, error: vendaError } = await admin
     .from('casa_artesao_vendas')
     .insert({
       data_venda: hojeBrasil(),
@@ -185,7 +187,7 @@ export async function registrarVenda(formData: FormData) {
     )
   }
 
-  const { error: itensError } = await supabase
+  const { error: itensError } = await admin
     .from('casa_artesao_venda_itens')
     .insert(
       itensVenda.map((item) => ({
@@ -201,7 +203,7 @@ export async function registrarVenda(formData: FormData) {
     )
 
   if (itensError) {
-    await supabase.from('casa_artesao_vendas').delete().eq('id', venda.id)
+    await admin.from('casa_artesao_vendas').delete().eq('id', venda.id)
     redirect(`/casa-artesao/caixa?message=${encodeURIComponent(itensError.message)}`)
   }
 
@@ -209,7 +211,7 @@ export async function registrarVenda(formData: FormData) {
 
   for (const item of itensVenda) {
     const quantidadeAnterior = Number(item.produto.quantidade ?? 0)
-    const { error: estoqueError } = await supabase
+    const { error: estoqueError } = await admin
       .from('casa_artesao_produtos')
       .update({
         quantidade: quantidadeAnterior - item.quantidade,
@@ -219,14 +221,14 @@ export async function registrarVenda(formData: FormData) {
     if (estoqueError) {
       await Promise.all(
         estoquesAtualizados.map((produto) =>
-          supabase
+          admin
             .from('casa_artesao_produtos')
             .update({ quantidade: produto.quantidade })
             .eq('id', produto.id)
         )
       )
-      await supabase.from('casa_artesao_venda_itens').delete().eq('venda_id', venda.id)
-      await supabase.from('casa_artesao_vendas').delete().eq('id', venda.id)
+      await admin.from('casa_artesao_venda_itens').delete().eq('venda_id', venda.id)
+      await admin.from('casa_artesao_vendas').delete().eq('id', venda.id)
       redirect(`/casa-artesao/caixa?message=${encodeURIComponent(estoqueError.message)}`)
     }
 

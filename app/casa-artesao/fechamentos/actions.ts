@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from "@/components/sidebar"
@@ -12,6 +13,7 @@ function competenciaFromData(data: string) {
 
 export async function gerarFechamentoMensal(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const artesaoId = String(formData.get('artesao_id') ?? '').trim()
   const dataInicio = String(formData.get('data_inicio') ?? '').trim()
@@ -61,7 +63,7 @@ export async function gerarFechamentoMensal(formData: FormData) {
     0
   )
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_fechamentos')
     .upsert(
       {
@@ -89,6 +91,7 @@ export async function gerarFechamentoMensal(formData: FormData) {
 
 export async function marcarFechamentoComoPago(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -96,7 +99,7 @@ export async function marcarFechamentoComoPago(formData: FormData) {
     redirect('/casa-artesao/fechamentos?message=Fechamento não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_fechamentos')
     .update({
       status: 'pago',
@@ -112,6 +115,7 @@ export async function marcarFechamentoComoPago(formData: FormData) {
 
 export async function reabrirFechamento(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
 
@@ -119,7 +123,7 @@ export async function reabrirFechamento(formData: FormData) {
     redirect('/casa-artesao/fechamentos?message=Fechamento não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('casa_artesao_fechamentos')
     .update({
       status: 'aberto',

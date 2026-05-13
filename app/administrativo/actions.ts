@@ -96,7 +96,7 @@ export async function criarUsuarioInterno(formData: FormData) {
     )
   }
 
-  const { data: usuario, error } = await supabase
+  const { data: usuario, error } = await admin
     .from('administrativo_usuarios')
     .insert({
       auth_user_id: authCriado.user.id,
@@ -130,7 +130,7 @@ export async function criarUsuarioInterno(formData: FormData) {
   const permissoes = extrairPermissoesDoFormulario(formData, usuario.id)
 
   if (permissoes.length > 0) {
-    const { error: permissaoError } = await supabase
+    const { error: permissaoError } = await admin
       .from('administrativo_permissoes')
       .insert(permissoes)
 
@@ -168,7 +168,7 @@ export async function atualizarUsuarioInterno(formData: FormData) {
     redirect('/administrativo/usuarios?message=Usuário não encontrado')
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('administrativo_usuarios')
     .update({
       nome,
@@ -203,12 +203,12 @@ export async function atualizarUsuarioInterno(formData: FormData) {
     }
   }
 
-  await supabase.from('administrativo_permissoes').delete().eq('usuario_id', id)
+  await admin.from('administrativo_permissoes').delete().eq('usuario_id', id)
 
   const permissoes = extrairPermissoesDoFormulario(formData, id)
 
   if (permissoes.length > 0) {
-    const { error: insertError } = await supabase
+    const { error: insertError } = await admin
       .from('administrativo_permissoes')
       .insert(permissoes)
 
@@ -228,8 +228,9 @@ export async function inativarUsuarioInterno(formData: FormData) {
   }
 
   const supabase = await createClient()
+  const admin = createAdminClient()
 
-  await supabase.from('administrativo_usuarios').update({ status: 'inativo' }).eq('id', id)
+  await admin.from('administrativo_usuarios').update({ status: 'inativo' }).eq('id', id)
 
   redirect('/administrativo/usuarios?message=Usuário inativado com sucesso')
 }
