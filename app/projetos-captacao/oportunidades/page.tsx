@@ -157,69 +157,92 @@ export default async function OportunidadesCaptacaoPage({
   const statusFiltro = params.status?.trim() || ''
   const fonteFiltro = params.fonte_id?.trim() || ''
 
-  const supabase = await createClient()
+  let fontes: Fonte[] = []
+  let oportunidades: Oportunidade[] = []
+  let queryErrorMessage = ''
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const supabase = await createClient()
 
-  if (!user) redirect('/login')
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-  const { data: fontesData } = await supabase
-    .from('captacao_fontes')
-    .select('id, nome, orgao, status')
-    .order('nome', { ascending: true })
+    if (authError) {
+      queryErrorMessage = authError.message
+    }
 
-  let oportunidadesQuery = supabase
-    .from('captacao_oportunidades')
-    .select(`
-      id,
-      titulo,
-      orgao,
-      esfera,
-      area,
-      tipo,
-      valor_disponivel,
-      prazo_inscricao,
-      link_oficial,
-      resumo,
-      documentos_exigidos,
-      quem_pode_participar,
-      status,
-      fonte_id,
-      created_at,
-      texto_edital,
-      resumo_ia,
-      requisitos_ia,
-      documentos_ia,
-      publico_ia,
-      valor_ia,
-      prazo_ia,
-      elegibilidade_prefeitura,
-      score_prefeitura,
-      recomendacao_ia
-    `)
-    .order('prazo_inscricao', { ascending: true, nullsFirst: false })
+    if (!user) {
+      if (!queryErrorMessage) redirect('/login')
+      // If auth fails due to Supabase env/network issues during build, continue with fallback.
+    }
 
-  if (busca) {
-    oportunidadesQuery = oportunidadesQuery.or(
-      `titulo.ilike.%${busca}%,orgao.ilike.%${busca}%,resumo.ilike.%${busca}%,tipo.ilike.%${busca}%`
-    )
+    const { data: fontesData, error: fontesError } = await supabase
+      .from('captacao_fontes')
+      .select('id, nome, orgao, status')
+      .order('nome', { ascending: true })
+
+    if (fontesError) {
+      queryErrorMessage = queryErrorMessage || fontesError.message
+    } else {
+      fontes = (fontesData ?? []) as Fonte[]
+    }
+
+    let oportunidadesQuery = supabase
+      .from('captacao_oportunidades')
+      .select(`
+        id,
+        titulo,
+        orgao,
+        esfera,
+        area,
+        tipo,
+        valor_disponivel,
+        prazo_inscricao,
+        link_oficial,
+        resumo,
+        documentos_exigidos,
+        quem_pode_participar,
+        status,
+        fonte_id,
+        created_at,
+        texto_edital,
+        resumo_ia,
+        requisitos_ia,
+        documentos_ia,
+        publico_ia,
+        valor_ia,
+        prazo_ia,
+        elegibilidade_prefeitura,
+        score_prefeitura,
+        recomendacao_ia
+      `)
+      .order('prazo_inscricao', { ascending: true, nullsFirst: false })
+
+    if (busca) {
+      oportunidadesQuery = oportunidadesQuery.or(
+        `titulo.ilike.%${busca}%,orgao.ilike.%${busca}%,resumo.ilike.%${busca}%,tipo.ilike.%${busca}%`
+      )
+    }
+
+    if (esferaFiltro) oportunidadesQuery = oportunidadesQuery.eq('esfera', esferaFiltro)
+    if (areaFiltro) oportunidadesQuery = oportunidadesQuery.eq('area', areaFiltro)
+    if (statusFiltro) oportunidadesQuery = oportunidadesQuery.eq('status', statusFiltro)
+    if (fonteFiltro) oportunidadesQuery = oportunidadesQuery.eq('fonte_id', fonteFiltro)
+
+    const { data: oportunidadesData, error: oportunidadesError } = await oportunidadesQuery
+
+    if (oportunidadesError) {
+      queryErrorMessage = queryErrorMessage || oportunidadesError.message
+    } else {
+      oportunidades = (oportunidadesData ?? []) as unknown as Oportunidade[]
+    }
+  } catch (caughtError) {
+    queryErrorMessage =
+      caughtError instanceof Error ? caughtError.message : String(caughtError)
   }
 
-  if (esferaFiltro) oportunidadesQuery = oportunidadesQuery.eq('esfera', esferaFiltro)
-  if (areaFiltro) oportunidadesQuery = oportunidadesQuery.eq('area', areaFiltro)
-  if (statusFiltro) oportunidadesQuery = oportunidadesQuery.eq('status', statusFiltro)
-  if (fonteFiltro) oportunidadesQuery = oportunidadesQuery.eq('fonte_id', fonteFiltro)
-
-  const { data: oportunidadesData, error } = await oportunidadesQuery
-
-  if (error) {
-    redirect(`/projetos-captacao/oportunidades?message=${encodeURIComponent(error.message)}`)
-  }
-
-  const fontes = (fontesData ?? []) as Fonte[]
-  const oportunidades = (oportunidadesData ?? []) as unknown as Oportunidade[]
   const fontesPorId = new Map(fontes.map((fonte) => [fonte.id, fonte]))
 
   function getFonte(fonteId: string | null) {
@@ -418,9 +441,9 @@ export default async function OportunidadesCaptacaoPage({
                   <option value="reprovada">Reprovada</option>
                 </select>
 
-                {params.message && (
+                {(params.message || queryErrorMessage) && (
                   <p className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                    {params.message}
+                    {params.message || queryErrorMessage}
                   </p>
                 )}
 
