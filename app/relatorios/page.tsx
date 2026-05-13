@@ -36,7 +36,8 @@ type AlunoRelacionado = {
 
 type MatriculaAluno = {
   aula_id: string
-  alunos: AlunoRelacionado | AlunoRelacionado[] | null
+  aluno_id: string
+  status: string
 }
 
 type RegistroFrequencia = {

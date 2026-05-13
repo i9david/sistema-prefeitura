@@ -52,7 +52,6 @@ type AulaRelacionada = {
   horario_fim: string
   status: string
   modalidades: Relacao<ModalidadeRelacionada>
-  aula_professores: AulaProfessorRelacionada[] | null
 }
 
 type Matricula = {
@@ -130,9 +129,12 @@ function getModalidade(aula: AulaRelacionada | null) {
 }
 
 function getProfessores(aula: AulaRelacionada | null, aulaProfessores: AulaProfessorRelacionada[], professores: ProfessorRelacionado[]) {
-  if (!aula?.aula_professores) return []
+  if (!aula) return []
 
-  const professorIds = aula.aula_professores.map((vinculo) => vinculo.professor_id)
+  const professorIds = aulaProfessores
+    .filter((vinculo) => vinculo.aula_id === aula.id)
+    .map((vinculo) => vinculo.professor_id)
+  
   return professores.filter((professor) => professorIds.includes(professor.id))
 }
 

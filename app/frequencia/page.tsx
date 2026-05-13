@@ -34,7 +34,11 @@ type Aluno = {
 }
 
 type MatriculaAluno = {
-  alunos: Aluno | Aluno[] | null
+  id: string
+  aluno_id: string
+  status: string
+  data_inicio: string
+  data_fim: string | null
 }
 
 type Frequencia = {
