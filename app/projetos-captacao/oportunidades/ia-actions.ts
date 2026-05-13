@@ -6,9 +6,9 @@ import Link from 'next/link'
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
 import { Sidebar } from "@/components/sidebar"
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null
 
 function limparTexto(valor: string | null | undefined) {
   return String(valor || '').trim()
@@ -45,8 +45,8 @@ async function salvarHistoricoIA({
 export async function analisarEditalComIA(formData: FormData) {
   const supabase = await createClient()
 
-  if (!process.env.OPENAI_API_KEY) {
-    redirect('/projetos-captacao/oportunidades?message=OPENAI_API_KEY não configurada no .env.local')
+  if (!process.env.OPENAI_API_KEY || !openai) {
+    redirect('/projetos-captacao/oportunidades?message=IA temporariamente indisponível')
   }
 
   const id = String(formData.get('id') || '').trim()
@@ -173,8 +173,8 @@ ${textoBase}
 export async function gerarProjetoAutomatico(formData: FormData) {
   const supabase = await createClient()
 
-  if (!process.env.OPENAI_API_KEY) {
-    redirect('/projetos-captacao/oportunidades?message=OPENAI_API_KEY não configurada no .env.local')
+  if (!process.env.OPENAI_API_KEY || !openai) {
+    redirect('/projetos-captacao/oportunidades?message=IA temporariamente indisponível')
   }
 
   const id = String(formData.get('id') || '').trim()
