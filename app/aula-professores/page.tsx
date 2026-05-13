@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createTenantClient as createClient } from '@/lib/supabase/tenant-server'
-import { Sidebar } from "@/components/sidebar"
 import { ModuloCentroCulturalNav } from '@/components/modulo-centro-cultural-nav'
+import { exigirPermissaoPagina } from '@/lib/seguranca-paginas'
 import {
   atualizarVinculoProfessorAula,
   excluirVinculoProfessorAula,
@@ -48,6 +48,8 @@ export default async function AulaProfessoresPage({
   }>
 }) {
   const params = await searchParams
+  await exigirPermissaoPagina('Centro Cultural', 'Professores', 'visualizar')
+
   const editarId = params.editar?.trim() || ''
   const modoNovo = params.novo === '1'
 

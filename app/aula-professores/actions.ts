@@ -6,7 +6,7 @@ import { exigirPermissaoAction } from '@/lib/seguranca-actions'
 export async function vincularProfessorNaAula(formData: FormData) {
   const { supabase } = await exigirPermissaoAction(
     'Centro Cultural',
-    'Professores x Aulas',
+    'Professores',
     'criar'
   )
 
@@ -45,7 +45,7 @@ export async function vincularProfessorNaAula(formData: FormData) {
 export async function atualizarVinculoProfessorAula(formData: FormData) {
   const { supabase } = await exigirPermissaoAction(
     'Centro Cultural',
-    'Professores x Aulas',
+    'Professores',
     'editar'
   )
 
@@ -77,7 +77,7 @@ export async function atualizarVinculoProfessorAula(formData: FormData) {
 export async function excluirVinculoProfessorAula(formData: FormData) {
   const { supabase } = await exigirPermissaoAction(
     'Centro Cultural',
-    'Professores x Aulas',
+    'Professores',
     'excluir'
   )
 

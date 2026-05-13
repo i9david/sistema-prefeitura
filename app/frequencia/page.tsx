@@ -63,7 +63,7 @@ export default async function FrequenciaPage({
     data_aula?: string
   }>
 }) {
-  await exigirPermissaoPagina('Centro Cultural', 'Frequï¿½ncia', 'visualizar')
+  await exigirPermissaoPagina('Centro Cultural', 'Frequência', 'visualizar')
 
   const params = await searchParams
   const aulaIdSelecionada = params.aula_id?.trim() || ''
@@ -212,7 +212,7 @@ export default async function FrequenciaPage({
 
   function getDescricaoAula(aula: Aula) {
     const modalidadeNome = getModalidadeNome(aula.modalidade_id)
-    return `${aula.nome} ï¿½ ${modalidadeNome} ï¿½ ${aula.dia_semana} ï¿½ ${aula.horario_inicio} ï¿½s ${aula.horario_fim}`
+    return `${aula.nome} • ${modalidadeNome} • ${aula.dia_semana} • ${aula.horario_inicio} às ${aula.horario_fim}`
   }
 
   function getStatusAluno(alunoId: string) {
@@ -231,7 +231,7 @@ export default async function FrequenciaPage({
         <section className="space-y-6">
           <div className={cardClassName()}>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Frequï¿½ncia por turma
+              Frequência por turma
             </h1>
             <p className="mt-2 text-sm text-slate-600">
               {professor
@@ -314,8 +314,8 @@ export default async function FrequenciaPage({
                       <thead>
                         <tr className="border-b bg-slate-50">
                           <th className="px-4 py-3 text-left">Aluno</th>
-                          <th className="px-4 py-3 text-left">Presenï¿½a</th>
-                          <th className="px-4 py-3 text-left">Observaï¿½ï¿½o</th>
+                          <th className="px-4 py-3 text-left">Presença</th>
+                          <th className="px-4 py-3 text-left">Observação</th>
                         </tr>
                       </thead>
 
@@ -345,7 +345,7 @@ export default async function FrequenciaPage({
                               <input
                                 name={`observacoes_${aluno.id}`}
                                 defaultValue={getObservacaoAluno(aluno.id)}
-                                placeholder="Observaï¿½ï¿½o"
+                                placeholder="Observação"
                                 className="w-full rounded-xl border px-3 py-2"
                               />
                             </td>
@@ -360,7 +360,7 @@ export default async function FrequenciaPage({
                       type="submit"
                       className="rounded-2xl bg-green-600 px-6 py-3 text-white"
                     >
-                      Salvar frequï¿½ncia
+                      Salvar frequência
                     </button>
                   </div>
                 </form>
