@@ -303,7 +303,7 @@ export default async function AlunosPage({
   }
 
   const alunosBrutos = (alunosData ?? []) as Aluno[]
-  const alunoIds = alunosBrutos.map((aluno) => aluno.id)
+  const alunoIdsBrutos = alunosBrutos.map((aluno) => aluno.id)
   const pessoaIds = Array.from(
     new Set(alunosBrutos.map((aluno) => aluno.pessoa_id).filter(Boolean) as string[])
   )
@@ -321,11 +321,11 @@ export default async function AlunosPage({
   }
 
   const { data: alunoMatriculasData, error: alunoMatriculasError } =
-    alunoIds.length > 0
+    alunoIdsBrutos.length > 0
       ? await supabase
           .from('aluno_matriculas')
           .select('id, aluno_id, status, data_inicio, data_fim, aula_id')
-          .in('aluno_id', alunoIds)
+          .in('aluno_id', alunoIdsBrutos)
       : { data: [], error: null }
 
   if (alunoMatriculasError) {
