@@ -23,8 +23,21 @@ type MatriculaIndicador = {
   status: string
   data_inicio: string
   data_fim: string | null
-  alunos: Relacao<AlunoRelacionado>
-  aulas: Relacao<AulaRelacionada>
+}
+
+type AlunoIndicador = {
+  id: string
+  status: string
+}
+
+type AulaIndicador = {
+  id: string
+  modalidade_id: string
+}
+
+type ModalidadeIndicador = {
+  id: string
+  nome: string
 }
 
 type FrequenciaIndicador = {
@@ -52,12 +65,6 @@ export type IndicadoresGestaoCultural = {
   totalLancamentosFrequencia: number
   totalPresencas: number
   rankingModalidades: RankingModalidade[]
-}
-
-function normalizarRelacao<T>(relacao: Relacao<T>) {
-  if (!relacao) return null
-  if (Array.isArray(relacao)) return relacao[0] ?? null
-  return relacao
 }
 
 function arredondarPercentual(valor: number) {
@@ -100,25 +107,70 @@ export async function getIndicadoresGestaoCultural(params?: {
 
   const { data: matriculasData, error: matriculasError } = await supabase
     .from('aluno_matriculas')
-    .select(`
-      id,
-      aluno_id,
-      aula_id,
-      status,
-      data_inicio,
-      data_fim,
-      alunos:aluno_id!aluno_matriculas_aluno_id_fkey ( status ),
-      aulas:aula_id!aluno_matriculas_aula_id_fkey (
-        id,
-        modalidades!aulas_modalidade_id_fkey ( id, nome )
-      )
-    `)
+    .select('id, aluno_id, aula_id, status, data_inicio, data_fim')
     .lte('data_inicio', dataFim)
     .or(`data_fim.is.null,data_fim.gte.${dataInicio}`)
 
   if (matriculasError) {
     throw new Error(matriculasError.message)
   }
+
+  const matriculas = (matriculasData ?? []) as MatriculaIndicador[]
+  const matriculasPeriodo = matriculas.filter((matricula) =>
+    matriculaExistiuNoPeriodo(matricula, dataInicio, dataFim)
+  )
+
+  const alunoIds = Array.from(
+    new Set(matriculasPeriodo.map((matricula) => matricula.aluno_id).filter(Boolean))
+  )
+
+  const { data: alunosData, error: alunosError } = alunoIds.length > 0
+    ? await supabase.from('alunos').select('id, status').in('id', alunoIds)
+    : { data: [], error: null }
+
+  if (alunosError) {
+    throw new Error(alunosError.message)
+  }
+
+  const alunosPorId = new Map(
+    (alunosData ?? []).map((aluno: AlunoIndicador) => [aluno.id, aluno.status])
+  )
+
+  const matriculasAtivas = matriculasPeriodo.filter((matricula) =>
+    matricula.status === 'ativo' && alunosPorId.get(matricula.aluno_id) === 'ativo'
+  )
+
+  const aulaIds = Array.from(
+    new Set(matriculasAtivas.map((matricula) => matricula.aula_id).filter(Boolean))
+  )
+
+  const { data: aulasData, error: aulasError } = aulaIds.length > 0
+    ? await supabase.from('aulas').select('id, modalidade_id').in('id', aulaIds)
+    : { data: [], error: null }
+
+  if (aulasError) {
+    throw new Error(aulasError.message)
+  }
+
+  const aulasPorId = new Map(
+    (aulasData ?? []).map((aula: AulaIndicador) => [aula.id, aula.modalidade_id])
+  )
+
+  const modalidadeIds = Array.from(
+    new Set((aulasData ?? []).map((aula: AulaIndicador) => aula.modalidade_id).filter(Boolean))
+  )
+
+  const { data: modalidadesData, error: modalidadesError } = modalidadeIds.length > 0
+    ? await supabase.from('modalidades').select('id, nome').in('id', modalidadeIds)
+    : { data: [], error: null }
+
+  if (modalidadesError) {
+    throw new Error(modalidadesError.message)
+  }
+
+  const modalidadesPorId = new Map(
+    (modalidadesData ?? []).map((modalidade: ModalidadeIndicador) => [modalidade.id, modalidade.nome])
+  )
 
   const { data: frequenciasData, error: frequenciasError } = await supabase
     .from('frequencias')
@@ -130,17 +182,7 @@ export async function getIndicadoresGestaoCultural(params?: {
     throw new Error(frequenciasError.message)
   }
 
-  const matriculas = (matriculasData ?? []) as unknown as MatriculaIndicador[]
   const frequencias = (frequenciasData ?? []) as FrequenciaIndicador[]
-
-  const matriculasPeriodo = matriculas.filter((matricula) =>
-    matriculaExistiuNoPeriodo(matricula, dataInicio, dataFim)
-  )
-
-  const matriculasAtivas = matriculasPeriodo.filter((matricula) => {
-    const aluno = normalizarRelacao(matricula.alunos)
-    return matricula.status === 'ativo' && aluno?.status === 'ativo'
-  })
 
   const alunosAtivos = new Set(matriculasAtivas.map((matricula) => matricula.aluno_id))
   const evasoes = matriculasPeriodo.filter(
@@ -188,23 +230,24 @@ export async function getIndicadoresGestaoCultural(params?: {
   >()
 
   matriculasAtivas.forEach((matricula) => {
-    const aula = normalizarRelacao(matricula.aulas)
-    const modalidade = normalizarRelacao(aula?.modalidades ?? null)
+    const aulaId = matricula.aula_id
+    const modalidadeId = aulasPorId.get(aulaId)
+    const modalidadeNome = modalidadeId ? modalidadesPorId.get(modalidadeId) : undefined
 
-    if (!aula || !modalidade) return
+    if (!modalidadeId || !modalidadeNome) return
 
     const atual =
-      modalidades.get(modalidade.id) ??
+      modalidades.get(modalidadeId) ??
       {
-        modalidade: modalidade.nome,
+        modalidade: modalidadeNome,
         alunos: new Set<string>(),
         aulas: new Set<string>(),
       }
 
     atual.alunos.add(matricula.aluno_id)
-    atual.aulas.add(aula.id)
+    atual.aulas.add(aulaId)
 
-    modalidades.set(modalidade.id, atual)
+    modalidades.set(modalidadeId, atual)
   })
 
   const rankingModalidades = Array.from(modalidades.entries())
