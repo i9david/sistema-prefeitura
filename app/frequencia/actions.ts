@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getMunicipioId } from '@/lib/supabase/tenant-server'
 
 type FrequenciaExistente = {
   aluno_id: string
@@ -198,7 +199,10 @@ export async function salvarFrequencia(formData: FormData) {
         redirect(`/frequencia?message=${encodeURIComponent(updateError.message)}`)
       }
     } else {
-      const { error: insertError } = await admin.from('frequencias').insert(registro)
+      const { error: insertError } = await admin.from('frequencias').insert({
+        ...registro,
+        municipio_id: getMunicipioId(),
+      })
 
       if (insertError) {
         redirect(`/frequencia?message=${encodeURIComponent(insertError.message)}`)
