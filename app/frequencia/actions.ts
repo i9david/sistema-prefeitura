@@ -16,13 +16,11 @@ type AlunoFrequencia = {
 }
 
 type MatriculaAluno = {
-  alunos: AlunoFrequencia | AlunoFrequencia[] | null
-}
-
-function getAlunoMatricula(matricula: MatriculaAluno) {
-  if (!matricula.alunos) return null
-  if (Array.isArray(matricula.alunos)) return matricula.alunos[0] ?? null
-  return matricula.alunos
+  id: string
+  aluno_id: string
+  status: string
+  data_inicio: string
+  data_fim: string | null
 }
 
 export async function salvarFrequencia(formData: FormData) {
@@ -59,12 +57,7 @@ export async function salvarFrequencia(formData: FormData) {
 
   const { data: matriculasData, error: matriculasError } = await supabase
     .from('aluno_matriculas')
-    .select(`
-      alunos:aluno_id!aluno_matriculas_aluno_id_fkey (
-        id,
-        status
-      )
-    `)
+    .select('id, aluno_id, status, data_inicio, data_fim')
     .eq('aula_id', aulaId)
     .eq('status', 'ativo')
     .lte('data_inicio', dataAula)
@@ -74,9 +67,26 @@ export async function salvarFrequencia(formData: FormData) {
     redirect(`/frequencia?message=${encodeURIComponent(matriculasError.message)}`)
   }
 
-  let alunos = ((matriculasData ?? []) as MatriculaAluno[])
-    .map(getAlunoMatricula)
-    .filter((aluno): aluno is AlunoFrequencia => Boolean(aluno && aluno.status === 'ativo'))
+  const matriculas = (matriculasData ?? []) as MatriculaAluno[]
+  const alunoIds = Array.from(
+    new Set(matriculas.map((m) => m.aluno_id).filter(Boolean))
+  )
+
+  const { data: alunosData, error: alunosError } = alunoIds.length > 0
+    ? await supabase.from('alunos').select('id, status').in('id', alunoIds)
+    : { data: [], error: null }
+
+  if (alunosError) {
+    redirect(`/frequencia?message=${encodeURIComponent(alunosError.message)}`)
+  }
+
+  const alunosPorId = new Map(
+    (alunosData ?? []).map((aluno: AlunoFrequencia) => [aluno.id, aluno.status])
+  )
+
+  let alunos = matriculas
+    .filter((m) => alunosPorId.get(m.aluno_id) === 'ativo')
+    .map((m) => ({ id: m.aluno_id, status: 'ativo' }))
 
   const { data: matriculasAtivasDaTurma, error: matriculasAtivasDaTurmaError } =
     alunos.length === 0
@@ -137,7 +147,7 @@ export async function salvarFrequencia(formData: FormData) {
     )
   }
 
-  const alunoIds = registrosValidos.map((registro) => registro.aluno_id)
+  const alunoIdsFrequencia = registrosValidos.map((registro) => registro.aluno_id)
 
   const { data: frequenciasExistentes, error: frequenciasExistentesError } =
     await supabase
@@ -145,7 +155,7 @@ export async function salvarFrequencia(formData: FormData) {
       .select('aluno_id, origem, hora_registro')
       .eq('aula_id', aulaId)
       .eq('data_aula', dataAula)
-      .in('aluno_id', alunoIds)
+      .in('aluno_id', alunoIdsFrequencia)
 
   if (frequenciasExistentesError) {
     redirect(`/frequencia?message=${encodeURIComponent(frequenciasExistentesError.message)}`)
