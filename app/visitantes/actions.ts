@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getMunicipioId } from '@/lib/supabase/tenant-server'
 
 type SupabaseTenant = Awaited<ReturnType<typeof exigirPermissaoAction>>['supabase']
 
@@ -144,6 +145,7 @@ async function buscarOuCriarPessoaVisitante({
       nome,
       telefone,
       data_nascimento: null,
+      municipio_id: getMunicipioId(),
     })
     .select('id')
     .single()

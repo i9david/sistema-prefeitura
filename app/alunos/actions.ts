@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { exigirPermissaoAction } from '@/lib/seguranca-actions'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getMunicipioId } from '@/lib/supabase/tenant-server'
 
 type StatusAluno = 'ativo' | 'inativo'
 
@@ -164,6 +165,7 @@ async function buscarOuCriarPessoa({
       nome,
       telefone,
       data_nascimento: dataNascimento || null,
+      municipio_id: getMunicipioId(),
     })
     .select('id')
     .single()
