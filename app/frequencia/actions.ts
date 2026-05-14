@@ -178,14 +178,32 @@ export async function salvarFrequencia(formData: FormData) {
     }
   })
 
-  const { error: upsertError } = await admin
-    .from('frequencias')
-    .upsert(registrosParaSalvar, {
-      onConflict: 'municipio_id,aula_id,aluno_id,data_aula',
-    })
+  for (const registro of registrosParaSalvar) {
+    const frequenciaExistente = frequenciasPorAluno.get(registro.aluno_id)
 
-  if (upsertError) {
-    redirect(`/frequencia?message=${encodeURIComponent(upsertError.message)}`)
+    if (frequenciaExistente) {
+      const { error: updateError } = await admin
+        .from('frequencias')
+        .update({
+          status: registro.status,
+          observacoes: registro.observacoes,
+          origem: registro.origem,
+          hora_registro: registro.hora_registro,
+        })
+        .eq('aula_id', registro.aula_id)
+        .eq('aluno_id', registro.aluno_id)
+        .eq('data_aula', registro.data_aula)
+
+      if (updateError) {
+        redirect(`/frequencia?message=${encodeURIComponent(updateError.message)}`)
+      }
+    } else {
+      const { error: insertError } = await admin.from('frequencias').insert(registro)
+
+      if (insertError) {
+        redirect(`/frequencia?message=${encodeURIComponent(insertError.message)}`)
+      }
+    }
   }
 
   redirect(
